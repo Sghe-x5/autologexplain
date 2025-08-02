@@ -26,7 +26,7 @@ function isValidDate(date: Date | undefined) {
   }
   return !isNaN(date.getTime())
 }
-export default function DatePicker() {
+export default function DatePicker({label} : DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | undefined>(
     new Date("2025-06-01")
@@ -36,7 +36,7 @@ export default function DatePicker() {
   return (
     <div className="flex flex-col gap-3">
       <Label htmlFor="date" className="px-1">
-        Subscription Date
+        {label}
       </Label>
       <div className="relative flex gap-2">
         <Input
@@ -98,7 +98,5 @@ export default function DatePicker() {
 
 
 type DatePickerProps = {
-  value: Date | null;
-  onChange: (date: Date | null) => void;
-  label?: string;
+    label?: string;
 };
