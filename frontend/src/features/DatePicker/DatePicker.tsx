@@ -10,29 +10,37 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import TimePicker from "../TimePicker/TimePicker"
-function formatDate(date: Date | undefined) {
-  if (!date) {
-    return ""
-  }
-  return date.toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })
-}
-function isValidDate(date: Date | undefined) {
-  if (!date) {
-    return false
-  }
-  return !isNaN(date.getTime())
-}
-export default function DatePicker({label} : DatePickerProps) {
+export default function DatePicker({ label }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [date, setDate] = React.useState<Date | undefined>(
-    new Date("2025-06-01")
-  )
-  const [month, setMonth] = React.useState<Date | undefined>(date)
-  const [value, setValue] = React.useState(formatDate(date))
+  const [date, setDate] = React.useState<Date | undefined>(undefined)
+  const [month, setMonth] = React.useState<Date | undefined>(undefined)
+  const [time, setTime] = React.useState<{ hours: number; minutes: number } | undefined>(undefined)
+  const [value, setValue] = React.useState("")
+
+  function handleDateChange(newDate: Date | undefined) {
+    if (!newDate) return
+    setDate(newDate)
+    setMonth(newDate)
+    updateFormattedValue(newDate, time)
+  }
+
+  function handleTimeChange(newTime: { hours: number; minutes: number }) {
+    setTime(newTime)
+    updateFormattedValue(date, newTime)
+  }
+
+  function updateFormattedValue(
+    d: Date | undefined,
+    t: { hours: number; minutes: number } | undefined
+  ) {
+    if (!d) {
+      setValue("")
+      return
+    }
+    const formatted = formatDateWithTime(d, t)
+    setValue(formatted)
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <Label htmlFor="date" className="px-1">
@@ -42,15 +50,10 @@ export default function DatePicker({label} : DatePickerProps) {
         <Input
           id="date"
           value={value}
-          placeholder="June 01, 2025"
+          placeholder="дд.мм.гггг --:--"
           className="bg-background pr-10"
           onChange={(e) => {
-            const date = new Date(e.target.value)
             setValue(e.target.value)
-            if (isValidDate(date)) {
-              setDate(date)
-              setMonth(date)
-            }
           }}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
@@ -82,12 +85,9 @@ export default function DatePicker({label} : DatePickerProps) {
               captionLayout="dropdown"
               month={month}
               onMonthChange={setMonth}
-              onSelect={(date) => {
-                setDate(date)
-                setValue(formatDate(date))
-                setOpen(false)
-              }}
+              onSelect={handleDateChange}
             />
+            <TimePicker value={time} onChange={handleTimeChange} />
           </PopoverContent>
         </Popover>
       </div>
@@ -95,7 +95,18 @@ export default function DatePicker({label} : DatePickerProps) {
   )
 }
 
-
+function formatDateWithTime(
+  date: Date | undefined,
+  time?: { hours: number; minutes: number }
+) {
+  if (!date) return ""
+  const dd = String(date.getDate()).padStart(2, "0")
+  const mm = String(date.getMonth() + 1).padStart(2, "0")
+  const yyyy = date.getFullYear()
+  const hh = time ? String(time.hours).padStart(2, "0") : "--"
+  const min = time ? String(time.minutes).padStart(2, "0") : "--"
+  return `${dd}.${mm}.${yyyy} ${hh}:${min}`
+}
 
 type DatePickerProps = {
     label?: string;
