@@ -1,7 +1,12 @@
+import LogExplainUI from "@/widgets/LogExplainModal";
 import "./App.css";
 
 function App() {
-  return <></>;
+  return (
+    <>
+      <LogExplainUI />
+    </>
+  );
 }
 
 export default App;
