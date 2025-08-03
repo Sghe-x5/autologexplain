@@ -19,15 +19,13 @@ export default function DatePicker({ label }: DatePickerProps) {
   const [time, setTime] = React.useState<{ hours: number; minutes: number } | undefined>(undefined)
   const [value, setValue] = React.useState("")
 
-  // Обработчик для кнопки "Очистить"
   const handleClear = () => {
     setDate(undefined)
     setTime(undefined)
     setValue("")
-    setOpen(false) // Закрываем попап
+    setOpen(false)
   }
 
-  // Обработчик для кнопки "Сегодня"
   const handleToday = () => {
     const now = new Date()
     setDate(now)
@@ -66,7 +64,6 @@ export default function DatePicker({ label }: DatePickerProps) {
     setValue(formatted)
   }
 
-  // Форматирование значения для инпута
   React.useEffect(() => {
     updateFormattedValue(date, time)
   }, [date, time])
@@ -161,7 +158,6 @@ function formatDateWithTime(
   const mm = String(date.getMonth() + 1).padStart(2, "0")
   const yyyy = date.getFullYear()
   
-  // Форматирование времени: "--:--" если время не установлено
   const timePart = time 
     ? `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`
     : "--:--"
