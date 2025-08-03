@@ -2,6 +2,7 @@ import * as React from "react"
 import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { ru } from "date-fns/locale"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -10,12 +11,36 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import TimePicker from "../TimePicker/TimePicker"
+
 export default function DatePicker({ label }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | undefined>(undefined)
   const [month, setMonth] = React.useState<Date | undefined>(undefined)
   const [time, setTime] = React.useState<{ hours: number; minutes: number } | undefined>(undefined)
   const [value, setValue] = React.useState("")
+
+  // Обработчик для кнопки "Очистить"
+  const handleClear = () => {
+    setDate(undefined)
+    setTime(undefined)
+    setValue("")
+    setOpen(false) // Закрываем попап
+  }
+
+  // Обработчик для кнопки "Сегодня"
+  const handleToday = () => {
+    const now = new Date()
+    setDate(now)
+    setTime({ 
+      hours: now.getHours(), 
+      minutes: now.getMinutes() 
+    })
+    setMonth(now)
+    updateFormattedValue(now, { 
+      hours: now.getHours(), 
+      minutes: now.getMinutes() 
+    })
+  }
 
   function handleDateChange(newDate: Date | undefined) {
     if (!newDate) return
@@ -40,6 +65,11 @@ export default function DatePicker({ label }: DatePickerProps) {
     const formatted = formatDateWithTime(d, t)
     setValue(formatted)
   }
+
+  // Форматирование значения для инпута
+  React.useEffect(() => {
+    updateFormattedValue(date, time)
+  }, [date, time])
 
   return (
     <div className="flex flex-col gap-3">
@@ -79,18 +109,41 @@ export default function DatePicker({ label }: DatePickerProps) {
             alignOffset={-8}
             sideOffset={10}
           >
-            <Calendar
-              mode="single"
-              selected={date}
-              captionLayout="dropdown"
-              month={month}
-              onMonthChange={setMonth}
-              onSelect={handleDateChange}
-              className="border-r"
-            />
-            <div className="flex flex-col">
-              <TimePicker value={time} onChange={handleTimeChange} />
+            <div className="h-[370px] flex flex-col justify-between border-r">
+              <Calendar
+                mode="single"
+                selected={date}
+                captionLayout="dropdown"
+                month={month}
+                onMonthChange={setMonth}
+                onSelect={handleDateChange}
+                weekStartsOn={1}
+                locale={ru}
+              />
+
+              <div className="flex justify-between px-4 py-1">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClear}
+                  className="text-destructive hover:text-destructive/80 cursor-pointer"
+                >
+                  Очистить
+                </Button>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToday}
+                  className="text-primary hover:text-primary/80 cursor-pointer"
+                >
+                  Сегодня
+                </Button>
+              </div>
             </div>
+              
+              <div className="px-1 pb-[10px]">
+                <TimePicker value={time} onChange={handleTimeChange} />
+              </div>
           </PopoverContent>
         </Popover>
       </div>
@@ -103,14 +156,19 @@ function formatDateWithTime(
   time?: { hours: number; minutes: number }
 ) {
   if (!date) return ""
+  
   const dd = String(date.getDate()).padStart(2, "0")
   const mm = String(date.getMonth() + 1).padStart(2, "0")
   const yyyy = date.getFullYear()
-  const hh = time ? String(time.hours).padStart(2, "0") : "--"
-  const min = time ? String(time.minutes).padStart(2, "0") : "--"
-  return `${dd}.${mm}.${yyyy} ${hh}:${min}`
+  
+  // Форматирование времени: "--:--" если время не установлено
+  const timePart = time 
+    ? `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`
+    : "--:--"
+  
+  return `${dd}.${mm}.${yyyy} ${timePart}`
 }
 
 type DatePickerProps = {
-    label?: string;
-};
+  label?: string;
+}
