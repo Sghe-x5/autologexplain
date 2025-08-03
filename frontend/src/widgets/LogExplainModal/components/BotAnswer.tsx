@@ -1,108 +1,82 @@
 import { Bot } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { FC } from "react";
-
-interface UserLogExplanation {
-  userId: number;
-  period: string | null;
-  service: string;
-  visits: number;
-  sessionDurationSeconds: number;
-  sessionDurationReadable: string;
-  purchases: {
-    count: number;
-    totalAmount: number;
-  };
-  refunds: {
-    count: number;
-    totalAmount: number;
-  };
-  summary: string;
-}
-
-const mockData: UserLogExplanation = {
-  userId: 123,
-  period: null,
-  service: "userService",
-  visits: 1,
-  sessionDurationSeconds: 1806,
-  sessionDurationReadable: "примерно 30 минут",
-  purchases: {
-    count: 0,
-    totalAmount: 0.0,
-  },
-  refunds: {
-    count: 1,
-    totalAmount: 1800.51,
-  },
-  summary:
-    "Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.",
-};
-
-const fields: {
-  key: keyof typeof mockData;
-  label: string;
-  render?: (v: any) => string;
-}[] = [
-  {
-    key: "period",
-    label: "Рассматриваемый период",
-    render: (v) => v ?? "не указан",
-  },
-  {
-    key: "service",
-    label: "Сервис",
-  },
-  {
-    key: "visits",
-    label: "Количество визитов",
-  },
-  {
-    key: "sessionDurationSeconds",
-    label: "Общая продолжительность сессии",
-    render: () =>
-      `${mockData.sessionDurationSeconds} секунд (${mockData.sessionDurationReadable})`,
-  },
-  {
-    key: "purchases",
-    label: "Покупки",
-    render: () =>
-      mockData.purchases.count === 0
-        ? `Пользователь не совершал покупок (${mockData.purchases.totalAmount.toFixed(
-            2
-          )} продаж)`
-        : `${
-            mockData.purchases.count
-          } покупк(и) на сумму ${mockData.purchases.totalAmount.toFixed(2)}`,
-  },
-  {
-    key: "refunds",
-    label: "Возвраты",
-    render: () =>
-      `${
-        mockData.refunds.count
-      } возврат на сумму ${mockData.refunds.totalAmount.toFixed(2)}`,
-  },
-  {
-    key: "summary",
-    label: "Вывод",
-  },
-];
+import { useLogStore } from "../model/store";
+import type { UserLogExplanation } from "../model/types";
 
 const BotAnswer: FC = () => {
+  const mockData = useLogStore((state) => state.log);
+
+  const fields: {
+    key: keyof UserLogExplanation;
+    label: string;
+    render?: (
+      v: any,
+      key: keyof UserLogExplanation,
+      log: UserLogExplanation
+    ) => string;
+  }[] = [
+    {
+      key: "period",
+      label: "Рассматриваемый период",
+      render: (v) => v ?? "не указан",
+    },
+    {
+      key: "service",
+      label: "Сервис",
+    },
+    {
+      key: "visits",
+      label: "Количество визитов",
+    },
+    {
+      key: "sessionDurationSeconds",
+      label: "Общая продолжительность сессии",
+      render: (v, _, log) =>
+        `${v} секунд (${log?.sessionDurationReadable ?? "?"})`,
+    },
+    {
+      key: "purchases",
+      label: "Покупки",
+      render: (v: UserLogExplanation["purchases"]) =>
+        v.count === 0
+          ? `Пользователь не совершал покупок (${v.totalAmount.toFixed(
+              2
+            )} продаж)`
+          : `${v.count} покупк(и) на сумму ${v.totalAmount.toFixed(2)}`,
+    },
+    {
+      key: "refunds",
+      label: "Возвраты",
+      render: (v: UserLogExplanation["refunds"]) =>
+        `${v.count} возврат на сумму ${v.totalAmount.toFixed(2)}`,
+    },
+    {
+      key: "summary",
+      label: "Вывод",
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-lg font-semibold">
         <Bot className="w-5 h-5" /> Результат анализа
       </h1>
 
-      <Card className="p-4 border-solid border-[#e2e8f0] ring-offset-0 outline-0 bg-[#f1f5f980]">
-        {fields.map(({ key, label, render }) => (
-          <p key={String(key)} className="text-[16px]">
-            {label}: {render ? render(mockData[key]) : String(mockData[key])}
-          </p>
-        ))}
-      </Card>
+      {mockData ? (
+        <Card className="p-4 border-solid border-[#e2e8f0] ring-offset-0 outline-0 bg-[#f1f5f980]">
+          {fields.map(({ key, label, render }) => (
+            <p key={String(key)} className="text-[16px]">
+              {label}:{" "}
+              {render
+                ? render(mockData[key], key, mockData)
+                : String(mockData[key])}
+            </p>
+          ))}
+        </Card>
+      ) : (
+        <div>Нет результатов анализа</div>
+      )}
     </div>
   );
 };

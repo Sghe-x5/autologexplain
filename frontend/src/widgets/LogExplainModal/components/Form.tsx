@@ -18,22 +18,40 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Calendar, Zap, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import {
+  logFormSchema,
+  type LogExplanation,
+  type UserLogExplanation,
+} from "../model/types";
+import { useLogStore } from "../model/store";
+import { getPeriod } from "@/lib/getPeriod";
 
-const formSchema = z.object({
-  service: z.string().nonempty("Выберите сервис"),
-  userID: z.string().min(1, "Введите имя пользователя"),
-  startTime: z.date(),
-  endTime: z.date(),
-});
+const mockData: UserLogExplanation = {
+  userId: 123,
+  period: null,
+  service: "userService",
+  visits: 1,
+  sessionDurationSeconds: 1806,
+  sessionDurationReadable: "примерно 30 минут",
+  purchases: {
+    count: 0,
+    totalAmount: 0.0,
+  },
+  refunds: {
+    count: 1,
+    totalAmount: 1800.51,
+  },
+  summary:
+    "Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.",
+};
 
 const LogExplainForm = () => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<LogExplanation>({
+    resolver: zodResolver(logFormSchema),
     defaultValues: {
       service: "",
       userID: "",
@@ -42,8 +60,22 @@ const LogExplainForm = () => {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    alert(JSON.stringify(values, null, 2));
+  const setLog = useLogStore((state) => state.setLog);
+  const resetLog = useLogStore((state) => state.reset);
+
+  const onSubmit = (values: LogExplanation) => {
+    mockData.userId = Number(values.userID);
+    mockData.period = getPeriod({
+      startTime: values.startTime,
+      endTime: values.endTime,
+    });
+
+    setLog(mockData);
+  };
+
+  const onReset = () => {
+    form.reset();
+    resetLog();
   };
 
   return (
@@ -157,7 +189,7 @@ const LogExplainForm = () => {
             type="button"
             className="flex-1/12"
             variant="secondary"
-            onClick={() => form.reset()}
+            onClick={onReset}
           >
             Сбросить
           </Button>
