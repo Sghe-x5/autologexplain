@@ -59,6 +59,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
   return (
     <div className="flex gap-1 h-[360px] items-center px-1 py-1">
       <div
+        data-test-id="input-hour-div"
         ref={hourRef}
         className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
         onScroll={() => loopScroll(hourRef, hours.length)}
@@ -76,6 +77,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
         ))}
       </div>
       <div
+        data-test-id="input-minute-div"
         ref={minuteRef}
         className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
         onScroll={() => loopScroll(minuteRef, minutes.length)}

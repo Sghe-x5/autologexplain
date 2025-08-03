@@ -58,13 +58,13 @@ const BotAnswer: FC = () => {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-test-id="ai-answer-div">
       <h1 className="flex items-center gap-2 text-lg font-semibold">
         <Bot className="w-5 h-5" /> Результат анализа
       </h1>
 
       {mockData ? (
-        <Card className="p-4 border-solid border-[#e2e8f0] ring-offset-0 outline-0 bg-[#f1f5f980]">
+        <Card className="p-4 border-solid border-[#e2e8f0] ring-offset-0 outline-0 bg-[#f1f5f980]" data-test-id="ai-finished-analise-div">
           {fields.map(({ key, label, render }) => (
             <p key={String(key)} className="text-[16px]">
               {label}:{" "}
@@ -75,7 +75,7 @@ const BotAnswer: FC = () => {
           ))}
         </Card>
       ) : (
-        <div>Нет результатов анализа</div>
+        <div data-test-id="ai-no-analises-div">Нет результатов анализа</div>
       )}
     </div>
   );
