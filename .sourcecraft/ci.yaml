@@ -1,17 +1,48 @@
-stages:
-  - lint
+on:
+  pull_request:
+    - workflows: test-backend-workflow
+      filter:
+        paths: "backend/**"
+        target_branches:
+          - "main"
+          - "dev"
 
-lint:
-  stage: lint
-  image: python:3.11
-  before_script:
-    - pip install poetry==1.8.3
-    - poetry config virtualenvs.create false
-    - poetry install --no-interaction --no-ansi --no-root
-    - poetry run pip install ruff mypy
-  script:
-    - poetry run ruff check .
-    - poetry run ruff format --diff .
-    - poetry run mypy .
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+    - workflows: test-frontend-workflow
+      filter:
+        paths: "frontend/**"
+        target_branches:
+          - "main"
+          - "dev"
+
+workflows:
+  test-backend-workflow:
+    tasks:
+      - test-backend-linters
+  test-frontend-workflow:
+    tasks:
+      - test-frontend-linters
+
+tasks:
+  - name: test-backend-linters
+    cubes:
+      - name: backend-linting
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd backend
+          - poetry install --no-interaction --no-ansi --no-root
+          - poetry run pip install ruff mypy
+          - poetry run ruff check .
+          - poetry run ruff format --diff .
+          - poetry run mypy .
+
+  - name: test-frontend-linters
+    cubes:
+      - name: frontend-linting
+        image: node:20
+        script:
+          - npm install -g yarn@1.22.22
+          - cd frontend
+          - yarn install --frozen-lockfile
+          - yarn lint
