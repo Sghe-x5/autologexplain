@@ -1,0 +1,17 @@
+stages:
+  - lint
+
+lint:
+  stage: lint
+  image: python:3.11
+  before_script:
+    - pip install poetry==1.8.3
+    - poetry config virtualenvs.create false
+    - poetry install --no-interaction --no-ansi --no-root
+    - poetry run pip install ruff mypy
+  script:
+    - poetry run ruff check .
+    - poetry run ruff format --diff .
+    - poetry run mypy .
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"'
