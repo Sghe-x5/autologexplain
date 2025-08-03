@@ -42,7 +42,6 @@ tasks:
       - name: frontend-linting
         image: node:20
         script:
-          - npm install -g yarn@1.22.22
           - cd frontend
           - yarn install --frozen-lockfile
           - yarn lint
