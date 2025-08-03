@@ -2,6 +2,7 @@ import * as React from "react"
 import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { ru } from "date-fns/locale"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -10,29 +11,66 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import TimePicker from "../TimePicker/TimePicker"
-function formatDate(date: Date | undefined) {
-  if (!date) {
-    return ""
-  }
-  return date.toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })
-}
-function isValidDate(date: Date | undefined) {
-  if (!date) {
-    return false
-  }
-  return !isNaN(date.getTime())
-}
-export default function DatePicker({label} : DatePickerProps) {
+
+export default function DatePicker({ label }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [date, setDate] = React.useState<Date | undefined>(
-    new Date("2025-06-01")
-  )
-  const [month, setMonth] = React.useState<Date | undefined>(date)
-  const [value, setValue] = React.useState(formatDate(date))
+  const [date, setDate] = React.useState<Date | undefined>(undefined)
+  const [month, setMonth] = React.useState<Date | undefined>(undefined)
+  const [time, setTime] = React.useState<{ hours: number; minutes: number } | undefined>(undefined)
+  const [value, setValue] = React.useState("")
+
+  // Обработчик для кнопки "Очистить"
+  const handleClear = () => {
+    setDate(undefined)
+    setTime(undefined)
+    setValue("")
+    setOpen(false) // Закрываем попап
+  }
+
+  // Обработчик для кнопки "Сегодня"
+  const handleToday = () => {
+    const now = new Date()
+    setDate(now)
+    setTime({ 
+      hours: now.getHours(), 
+      minutes: now.getMinutes() 
+    })
+    setMonth(now)
+    updateFormattedValue(now, { 
+      hours: now.getHours(), 
+      minutes: now.getMinutes() 
+    })
+  }
+
+  function handleDateChange(newDate: Date | undefined) {
+    if (!newDate) return
+    setDate(newDate)
+    setMonth(newDate)
+    updateFormattedValue(newDate, time)
+  }
+
+  function handleTimeChange(newTime: { hours: number; minutes: number }) {
+    setTime(newTime)
+    updateFormattedValue(date, newTime)
+  }
+
+  function updateFormattedValue(
+    d: Date | undefined,
+    t: { hours: number; minutes: number } | undefined
+  ) {
+    if (!d) {
+      setValue("")
+      return
+    }
+    const formatted = formatDateWithTime(d, t)
+    setValue(formatted)
+  }
+
+  // Форматирование значения для инпута
+  React.useEffect(() => {
+    updateFormattedValue(date, time)
+  }, [date, time])
+
   return (
     <div className="flex flex-col gap-3">
       <Label htmlFor="date" className="px-1">
@@ -42,15 +80,10 @@ export default function DatePicker({label} : DatePickerProps) {
         <Input
           id="date"
           value={value}
-          placeholder="June 01, 2025"
+          placeholder="дд.мм.гггг --:--"
           className="bg-background pr-10"
           onChange={(e) => {
-            const date = new Date(e.target.value)
             setValue(e.target.value)
-            if (isValidDate(date)) {
-              setDate(date)
-              setMonth(date)
-            }
           }}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
@@ -71,23 +104,46 @@ export default function DatePicker({label} : DatePickerProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto overflow-hidden p-0"
+            className="flex w-auto overflow-hidden border p-0 bg-white dark:bg-gray-800"
             align="end"
             alignOffset={-8}
             sideOffset={10}
           >
-            <Calendar
-              mode="single"
-              selected={date}
-              captionLayout="dropdown"
-              month={month}
-              onMonthChange={setMonth}
-              onSelect={(date) => {
-                setDate(date)
-                setValue(formatDate(date))
-                setOpen(false)
-              }}
-            />
+            <div className="h-[370px] flex flex-col justify-between border-r">
+              <Calendar
+                mode="single"
+                selected={date}
+                captionLayout="dropdown"
+                month={month}
+                onMonthChange={setMonth}
+                onSelect={handleDateChange}
+                weekStartsOn={1}
+                locale={ru}
+              />
+
+              <div className="flex justify-between px-4 py-1">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClear}
+                  className="text-destructive hover:text-destructive/80 cursor-pointer"
+                >
+                  Очистить
+                </Button>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToday}
+                  className="text-primary hover:text-primary/80 cursor-pointer"
+                >
+                  Сегодня
+                </Button>
+              </div>
+            </div>
+              
+              <div className="px-1 pb-[10px]">
+                <TimePicker value={time} onChange={handleTimeChange} />
+              </div>
           </PopoverContent>
         </Popover>
       </div>
@@ -95,8 +151,24 @@ export default function DatePicker({label} : DatePickerProps) {
   )
 }
 
-
+function formatDateWithTime(
+  date: Date | undefined,
+  time?: { hours: number; minutes: number }
+) {
+  if (!date) return ""
+  
+  const dd = String(date.getDate()).padStart(2, "0")
+  const mm = String(date.getMonth() + 1).padStart(2, "0")
+  const yyyy = date.getFullYear()
+  
+  // Форматирование времени: "--:--" если время не установлено
+  const timePart = time 
+    ? `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`
+    : "--:--"
+  
+  return `${dd}.${mm}.${yyyy} ${timePart}`
+}
 
 type DatePickerProps = {
-    label?: string;
-};
+  label?: string;
+}
