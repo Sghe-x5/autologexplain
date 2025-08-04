@@ -17,13 +17,15 @@ on:
 workflows:
   test-backend-workflow:
     tasks:
-      - test-backend-linters
+      - backend-linters
+      - backend-tests
   test-frontend-workflow:
     tasks:
-      - test-frontend-linters
+      - frontend-linters
+      - frontend-tests
 
 tasks:
-  - name: test-backend-linters
+  - name: backend-linters
     cubes:
       - name: backend-linting
         image: python:3.11
@@ -37,7 +39,18 @@ tasks:
           - poetry run ruff format --diff .
           - poetry run mypy .
 
-  - name: test-frontend-linters
+  - name: backend-tests
+    cubes:
+      - name: backend-tests
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd backend
+          - poetry install --no-interaction --no-ansi
+          - poetry run pytest
+
+  - name: frontend-linters
     cubes:
       - name: frontend-linting
         image: node:20
@@ -45,3 +58,12 @@ tasks:
           - cd frontend
           - yarn install --frozen-lockfile
           - yarn lint
+
+  - name: frontend-tests
+    cubes:
+      - name: frontend-tests
+        image: node:20
+        script:
+          - cd frontend
+          - yarn install --frozen-lockfile
+          - yarn test
