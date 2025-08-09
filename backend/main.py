@@ -6,7 +6,7 @@ from api.logs import router as logs_router
 from api.ws import router as ws_router
 from db.storage import init_store
 
-app = FastAPI(title="AutoLog (no-Postgres)")
+app = FastAPI(title="AutoLog ")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,3 +25,4 @@ app.include_router(ws_router, tags=["ws"])
 def on_startup():
     # сейчас хранение — в Redis, инициализация — no-op
     init_store()
+
