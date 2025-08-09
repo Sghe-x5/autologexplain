@@ -38,7 +38,7 @@ select = ["E","F","I","UP","B","SIM","ASYNC","TRY"]
 ignore = ["E501"]
 
 [tool.mypy]
-packages = ["backend"]
+plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
