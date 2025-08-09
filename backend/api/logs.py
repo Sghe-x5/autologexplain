@@ -138,3 +138,30 @@ def get_filter_options():
         )
     except KeyError:
         raise HTTPException(500, "Не удалось собрать фильтры из БД")
+
+@app.get("/logs/tree", response_model=list[ProductServices])
+def get_products_services_tree():
+    sql = """
+        SELECT DISTINCT product, service, environment
+        FROM logs
+        WHERE product IS NOT NULL AND product != ''
+          AND service IS NOT NULL AND service != ''
+          AND environment IS NOT NULL AND environment != ''
+        ORDER BY product, service, environment
+    """
+    rows = sql_query(sql)
+    tree: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    for r in rows:
+        p = r["product"]; s = r["service"]; e = r["environment"]
+        if not p or not s or not e:
+            continue
+        tree[p][s].add(e)
+
+    result: list[ProductServices] = []
+    for p in sorted(tree.keys()):
+        services = []
+        for s in sorted(tree[p].keys()):
+            environments = sorted(tree[p][s])
+            services.append(ServiceEnvs(service=s, environments=environments))
+        result.append(ProductServices(product=p, services=services))
+    return result
