@@ -41,6 +41,18 @@ ignore = ["E501"]
 packages = ["backend"]
 explicit_package_bases = true
 
+[[tool.mypy.overrides]]
+module = [
+  "redis",
+  "redis.*",
+  "fastapi",
+  "fastapi.*",
+  "loguru",
+  "celery",
+  "celery.*",
+]
+ignore_missing_imports = true
+
 [build-system]
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"

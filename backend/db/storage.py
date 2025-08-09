@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 import redis
 
@@ -45,7 +46,7 @@ def list_messages(chat_id: str, limit: int = 50) -> list[dict]:
     key = f"chat:{chat_id}:messages"
     length = cast(int, _r.llen(key))
     start = max(0, length - limit)
-    raw = cast(List[str], _r.lrange(key, start, length))
+    raws = cast(list[str], _r.lrange(key, start, length))
     out: list[dict] = []
     for raw in raws:
         try:
