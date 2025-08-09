@@ -1,0 +1,69 @@
+on:
+  pull_request:
+    - workflows: test-backend-workflow
+      filter:
+        paths: "backend/**"
+        target_branches:
+          - "main"
+          - "dev"
+
+    - workflows: test-frontend-workflow
+      filter:
+        paths: "frontend/**"
+        target_branches:
+          - "main"
+          - "dev"
+
+workflows:
+  test-backend-workflow:
+    tasks:
+      - backend-linters
+      - backend-tests
+  test-frontend-workflow:
+    tasks:
+      - frontend-linters
+      - frontend-tests
+
+tasks:
+  - name: backend-linters
+    cubes:
+      - name: backend-linting
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd backend
+          - poetry install --no-interaction --no-ansi --no-root
+          - poetry run pip install ruff mypy
+          - poetry run ruff check .
+          - poetry run ruff format --diff .
+          - poetry run mypy .
+
+  - name: backend-tests
+    cubes:
+      - name: backend-tests
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd backend
+          - poetry install --no-interaction --no-ansi
+          - poetry run pytest
+
+  - name: frontend-linters
+    cubes:
+      - name: frontend-linting
+        image: node:20
+        script:
+          - cd frontend
+          - yarn install --frozen-lockfile
+          - yarn lint
+
+  - name: frontend-tests
+    cubes:
+      - name: frontend-tests
+        image: node:20
+        script:
+          - cd frontend
+          - yarn install --frozen-lockfile
+          - yarn test
