@@ -1,6 +1,9 @@
 import json
+
 import redis
+
 from core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
+
 
 def _r():
     return redis.Redis(host=REDIS_HOST, port=int(REDIS_PORT), db=int(REDIS_DB), decode_responses=True)

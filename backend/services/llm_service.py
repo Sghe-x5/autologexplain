@@ -1,5 +1,6 @@
 import random
 
+
 def ask_llm(prompt: str, context: str) -> str:
     # Мок ответа LLM
     variants = [

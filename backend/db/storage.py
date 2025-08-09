@@ -1,9 +1,9 @@
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
 
 import redis
+
 from core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 
 _r = redis.Redis(host=REDIS_HOST, port=int(REDIS_PORT), db=int(REDIS_DB), decode_responses=True)
@@ -12,10 +12,10 @@ def init_store():
     # Redis не требует миграций. Оставлено на случай будущей инициализации.
     return
 
-def _now_iso():
-    return datetime.now(timezone.utc).isoformat()
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat() # UP017
 
-def create_chat(user_id: str, title: Optional[str] = None) -> str:
+def create_chat(user_id: str, title: str | None = None) -> str: # UP045
     chat_id = str(uuid.uuid4())
     _r.hset(
         f"chat:{chat_id}",
@@ -24,7 +24,7 @@ def create_chat(user_id: str, title: Optional[str] = None) -> str:
     _r.sadd("chats:index", chat_id)
     return chat_id
 
-def add_message(chat_id: str, role: str, content: str, meta: Optional[dict] = None) -> str:
+def add_message(chat_id: str, role: str, content: str, meta: dict | None = None) -> str:
     message_id = str(uuid.uuid4())
     item = {
         "id": message_id,

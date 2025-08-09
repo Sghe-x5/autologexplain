@@ -1,12 +1,13 @@
 import asyncio
+import contextlib
 import json
 from typing import Any
 
 import redis
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 from celery_worker import chat_turn_pubsub, run_analysis_pubsub
+from core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 
 router = APIRouter()
 
@@ -62,12 +63,8 @@ async def ws_chat(websocket: WebSocket, chat_id: str):
     except WebSocketDisconnect:
         pass
     finally:
-        try:
+        with contextlib.suppress(Exception):
             reader_task.cancel()
-        except Exception:
-            ...
-        try:
+        with contextlib.suppress(Exception):
             pubsub.unsubscribe(channel)
             pubsub.close()
-        except Exception:
-            ...

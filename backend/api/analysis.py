@@ -1,7 +1,9 @@
 import uuid
+
 from fastapi import APIRouter
-from schema import AnalysisStartRequest, AnalysisStartResponse
+
 from celery_worker import run_analysis_pubsub
+from schema import AnalysisStartRequest, AnalysisStartResponse
 
 router = APIRouter()
 

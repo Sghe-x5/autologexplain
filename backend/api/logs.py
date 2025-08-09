@@ -1,5 +1,5 @@
-from typing import Optional
 from fastapi import APIRouter, Query
+
 from schema import LogsResponse
 from services.ch_service import fetch_logs_and_aggregates
 
@@ -9,15 +9,15 @@ router = APIRouter()
 def search_logs(
     start_date: str,
     end_date: str,
-    product: Optional[str] = None,
-    service: Optional[str] = None,
-    environment: Optional[str] = None,
-    level: Optional[str] = None,
-    trace_id: Optional[str] = None,
-    ip_address: Optional[str] = None,
-    method: Optional[str] = None,
-    status_code: Optional[int] = None,
-    url_path: Optional[str] = None,
+    product: str | None = None,
+    service: str | None = None,
+    environment: str | None = None,
+    level: str | None = None,
+    trace_id: str | None = None,
+    ip_address: str | None = None,
+    method: str | None = None,
+    status_code: int | None = None,
+    url_path: str | None = None,
     page: int = 0,
     page_size: int = Query(50, ge=1, le=200),
 ):

@@ -4,9 +4,9 @@ from celery import Celery
 from loguru import logger
 
 from core.config import CELERY_BACKEND_URL, CELERY_BROKER_URL
+from db.storage import add_message, list_messages
 from services.ch_service import fetch_logs_and_aggregates
 from services.llm_service import ask_llm, build_context
-from backend.db.storage import add_message, list_messages
 from services.utils import publish_ws_message
 
 celery_app = Celery("tasks", broker=CELERY_BROKER_URL, backend=CELERY_BACKEND_URL)
