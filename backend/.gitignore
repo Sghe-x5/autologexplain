@@ -83,7 +83,7 @@ Pipfile.lock
 poetry.lock
 
 # Environments
-.env
+../.env
 .venv
 env/
 venv/
