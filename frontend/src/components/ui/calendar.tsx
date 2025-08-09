@@ -1,6 +1,7 @@
 import * as React from "react"
 import {
   ChevronDownIcon,
+  ChevronUpIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "lucide-react"
@@ -35,11 +36,13 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          { const localed = date.toLocaleDateString("default", { month: "long"});
+            return localed[0].toUpperCase() + localed.substring(1)},
         ...formatters,
       }}
       classNames={{
-        root: cn("w-fit", defaultClassNames.root),
+        
+        root: cn("w-[276px]", defaultClassNames.root),
         months: cn(
           "flex gap-4 flex-col md:flex-row relative",
           defaultClassNames.months
@@ -49,22 +52,14 @@ function Calendar({
           "flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
           defaultClassNames.nav
         ),
-        button_previous: cn(
-          buttonVariants({ variant: buttonVariant }),
-          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
-          defaultClassNames.button_previous
-        ),
-        button_next: cn(
-          buttonVariants({ variant: buttonVariant }),
-          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
-          defaultClassNames.button_next
-        ),
+        button_previous: "hidden",
+        button_next: "hidden",
         month_caption: cn(
-          "flex items-center justify-center h-(--cell-size) w-full px-(--cell-size)",
+          "flex items-center justify-center w-full",
           defaultClassNames.month_caption
         ),
         dropdowns: cn(
-          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5",
+          "w-full flex items-center text-sm font-medium justify-center gap-1.5",
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
@@ -98,7 +93,7 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day aspect-square select-none",
+          "relative w-full h-full p-0 text-center aspect-square select-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
           defaultClassNames.day
         ),
         range_start: cn(
@@ -108,7 +103,7 @@ function Calendar({
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn("rounded-r-md bg-accent", defaultClassNames.range_end),
         today: cn(
-          "bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none",
+          "bg-accent text-accent-foreground rounded-md bg-[#BFDBFE]",
           defaultClassNames.today
         ),
         outside: cn(
@@ -163,6 +158,33 @@ function Calendar({
             </td>
           )
         },
+        MonthsDropdown: ({ options, classNames, value, onChange }) => (
+          <MonthYearInputs
+            value={Number(value)}
+            min={0}
+            max={11}
+            onChange={onChange!}
+            options={options?.map((o) => ({ label: o.label, value: Number(o.value) }))}
+            classNames={classNames}
+          />
+        ),
+
+        YearsDropdown: ({ options, classNames, value, onChange }) => {
+          const numericOptions = options?.map((o) => ({ label: o.label, value: Number(o.value) })) || []
+          const minYear = numericOptions.length ? Math.min(...numericOptions.map((o) => o.value)) : 1900
+          const maxYear = numericOptions.length ? Math.max(...numericOptions.map((o) => o.value)) : 2100
+          return (
+            <MonthYearInputs
+              value={Number(value)}
+              min={minYear}
+              max={maxYear}
+              onChange={onChange!}
+              options={numericOptions}
+              classNames={classNames}
+            />
+          )
+        },
+
         ...components,
       }}
       {...props}
@@ -199,13 +221,77 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70",
-        defaultClassNames.day,
+        "relative w-full h-full p-0 text-center select-none focus:outline-none focus:ring-0",
+        modifiers.selected && "bg-[#2463EB] text-[#FAFAFA]",
+        modifiers.today && !modifiers.selected && "bg-[#BFDBFE] text-black",
         className
       )}
       {...props}
     />
   )
 }
+
+
+type MonthYearInputsProps = {
+  value: number
+  min: number
+  max: number
+  onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void
+  options?: { label: string; value: number }[]
+  classNames?: any
+}
+
+function MonthYearInputs({
+  value,
+  min,
+  max,
+  onChange,
+  options,
+  classNames,
+}: MonthYearInputsProps) {
+  function createSyntheticEvent(newValue: number) {
+    return {
+      target: { value: newValue.toString() },
+    } as React.ChangeEvent<HTMLSelectElement>
+  }
+
+  return (
+    <div
+      className={cn("flex w-full gap-2 h-[28px]", classNames?.dropdown_root)}
+      tabIndex={-1} // <- убираем попадание в фокус
+    >
+      <div
+        className="pl-2 w-full bg-transparent border-0 p-0 m-0 outline-none select-none flex items-center"
+        aria-label="Value"
+      >
+        {options?.find((o) => o.value === value)?.label ?? value.toString()}
+      </div>
+      <div className="pr-2 flex flex-col items-center justify-center">
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => onChange(createSyntheticEvent(value - 1 < min ? max : value - 1))}
+          className="p-0 m-0 text-sm select-none flex items-center justify-center"
+          aria-label="Decrease"
+        >
+          <ChevronUpIcon size={12} className="cursor-pointer" />
+        </button>
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => onChange(createSyntheticEvent(value + 1 > max ? min : value + 1))}
+          className="p-0 m-0 text-sm select-none flex items-center justify-center"
+          aria-label="Increase"
+        >
+          <ChevronDownIcon size={12} className="cursor-pointer" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+
+
+
 
 export { Calendar, CalendarDayButton }
