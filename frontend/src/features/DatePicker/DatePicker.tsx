@@ -100,7 +100,7 @@ export default function DatePicker({ label, value, onChange }: DatePickerProps) 
             alignOffset={-8}
             sideOffset={10}
           >
-            <div className="h-[370px] flex flex-col justify-between border-r">
+            <div className="w-full h-[370px] flex flex-col justify-between border-r">
               <Calendar
                 mode="single"
                 selected={internalDate}
@@ -132,7 +132,7 @@ export default function DatePicker({ label, value, onChange }: DatePickerProps) 
                 </Button>
               </div>
             </div>
-            <div className="px-1 pb-[10px]">
+            <div className="pb-[10px]">
               <TimePicker value={time} onChange={handleTimeChange} />
             </div>
           </PopoverContent>
