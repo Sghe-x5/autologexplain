@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import redis
 
@@ -9,11 +9,10 @@ from core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 _r = redis.Redis(host=REDIS_HOST, port=int(REDIS_PORT), db=int(REDIS_DB), decode_responses=True)
 
 def init_store():
-    # Redis не требует миграций. Оставлено на случай будущей инициализации.
     return
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat() # UP017
+    return datetime.now(UTC).isoformat() # UP017
 
 def create_chat(user_id: str, title: str | None = None) -> str: # UP045
     chat_id = str(uuid.uuid4())
