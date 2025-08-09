@@ -79,5 +79,5 @@ def fetch_logs_and_aggregates(filters: dict) -> dict:
         agg_rows = data2.get("data", [])
         aggregates = agg_rows[0] if agg_rows else {"total": 0, "errors": 0, "warns": 0}
 
-    samples = [LogRecord(**row).dict() for row in rows]
+    samples = [LogRecord(**row).dict() for row in rows] # samples: list[dict[str, Any]]
     return LogsResponse(samples=samples, aggregates=aggregates, applied_sql=applied_sql).dict()
