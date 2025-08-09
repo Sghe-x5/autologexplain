@@ -9,13 +9,15 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "*"
-uvicorn = {extras = ["standard"], version = "*"}
+uvicorn = {extras = ["standard"], version = "^0.35.0"}
 celery = "*"
 redis = "*"
 httpx = "*"
 requests = "*"
 loguru = "*"
 python-dotenv = "*"
+pydantic-settings = "^2.10.1"
+clickhouse-connect = "^0.8.18"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
