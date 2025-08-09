@@ -1,8 +1,8 @@
 fastapi
-uvicorn
+uvicorn[standard]
 clickhouse-connect
-pydantic
-python-dotenv
+pydantic>=2
+pydantic-settings>=2
 
 # Для тестирования
 pytest

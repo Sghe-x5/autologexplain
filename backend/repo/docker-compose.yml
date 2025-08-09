@@ -1,0 +1,48 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_USER: app
+      CLICKHOUSE_PASSWORD: app_pass
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--host=localhost", "--query", "SELECT 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+    volumes:
+      - ./clickhouse_data:/var/lib/clickhouse
+
+  ch-init:
+    image: clickhouse/clickhouse-server:24.8
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./db/init:/init
+      - ./data:/data          
+    entrypoint: ["/bin/bash", "/init/entrypoint.sh"]
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USER: app
+      CLICKHOUSE_PASSWORD: app_pass
+    restart: "no"
+
+  api:
+    build: .
+    env_file: .env
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      ch-init:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    environment:
+      CH_HOST: clickhouse
+      CH_PORT: 8123
+      CH_USER: app
+      CH_PASSWORD: app_pass
