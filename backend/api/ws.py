@@ -11,8 +11,12 @@ from core.config import REDIS_DB, REDIS_HOST, REDIS_PORT
 
 router = APIRouter()
 
+
 def _r():
-    return redis.Redis(host=REDIS_HOST, port=int(REDIS_PORT), db=int(REDIS_DB), decode_responses=True)
+    return redis.Redis(
+        host=REDIS_HOST, port=int(REDIS_PORT), db=int(REDIS_DB), decode_responses=True
+    )
+
 
 @router.websocket("/ws/chats/{chat_id}")
 async def ws_chat(websocket: WebSocket, chat_id: str):
@@ -52,14 +56,20 @@ async def ws_chat(websocket: WebSocket, chat_id: str):
                 filters = payload.get("filters", {})
                 prompt = payload.get("prompt")
                 run_analysis_pubsub.delay(request_id, chat_id, filters, prompt)
-                await websocket.send_text(json.dumps({"type": "accepted", "request_id": request_id}))
+                await websocket.send_text(
+                    json.dumps({"type": "accepted", "request_id": request_id})
+                )
             elif msg_type == "chat_turn":
                 request_id = payload.get("request_id") or f"ws-{id(payload)}"
                 content = payload.get("content", "")
                 chat_turn_pubsub.delay(request_id, chat_id, content)
-                await websocket.send_text(json.dumps({"type": "accepted", "request_id": request_id}))
+                await websocket.send_text(
+                    json.dumps({"type": "accepted", "request_id": request_id})
+                )
             else:
-                await websocket.send_text(json.dumps({"type": "error", "code": "unsupported_message"}))
+                await websocket.send_text(
+                    json.dumps({"type": "error", "code": "unsupported_message"})
+                )
     except WebSocketDisconnect:
         pass
     finally:

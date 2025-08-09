@@ -5,6 +5,7 @@ from services.ch_service import fetch_logs_and_aggregates
 
 router = APIRouter()
 
+
 @router.get("/search", response_model=LogsResponse)
 def search_logs(
     start_date: str,
@@ -37,6 +38,7 @@ def search_logs(
         "page_size": page_size,
     }
     return fetch_logs_and_aggregates(filters)
+
 
 @router.get("/options")
 def get_options():

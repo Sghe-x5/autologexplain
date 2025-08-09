@@ -20,8 +20,13 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
 )
 
-@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3})
-def run_analysis_pubsub(self, request_id: str, chat_id: str, filters: dict[str, Any], prompt: str | None = None):
+
+@celery_app.task(
+    bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3}
+)
+def run_analysis_pubsub(
+    self, request_id: str, chat_id: str, filters: dict[str, Any], prompt: str | None = None
+):
     try:
         logger.info(f"[analysis] chat_id={chat_id} req={request_id} filters={filters}")
 
@@ -31,21 +36,50 @@ def run_analysis_pubsub(self, request_id: str, chat_id: str, filters: dict[str, 
         applied_sql = result.get("applied_sql", "")
 
         if not samples:
-            content = "По заданным фильтрам логи не найдены. Расширьте интервал или ослабьте фильтры."
-            mid = add_message(chat_id, "assistant", content, {"filters": filters, "applied_sql": applied_sql, "aggregates": aggregates})
-            publish_ws_message(chat_id, {"type": "final", "request_id": request_id, "message_id": mid, "content": content})
+            content = (
+                "По заданным фильтрам логи не найдены. Расширьте интервал или ослабьте фильтры."
+            )
+            mid = add_message(
+                chat_id,
+                "assistant",
+                content,
+                {"filters": filters, "applied_sql": applied_sql, "aggregates": aggregates},
+            )
+            publish_ws_message(
+                chat_id,
+                {"type": "final", "request_id": request_id, "message_id": mid, "content": content},
+            )
             return
 
         context = build_context(aggregates, samples)
         answer = ask_llm(prompt or "Объясни простыми словами", context)
-        mid = add_message(chat_id, "assistant", answer, {"filters": filters, "applied_sql": applied_sql, "aggregates": aggregates})
-        publish_ws_message(chat_id, {"type": "final", "request_id": request_id, "message_id": mid, "content": answer})
+        mid = add_message(
+            chat_id,
+            "assistant",
+            answer,
+            {"filters": filters, "applied_sql": applied_sql, "aggregates": aggregates},
+        )
+        publish_ws_message(
+            chat_id,
+            {"type": "final", "request_id": request_id, "message_id": mid, "content": answer},
+        )
     except Exception as e:
         logger.exception("run_analysis_pubsub failed")
-        publish_ws_message(chat_id, {"type": "error", "request_id": request_id, "code": "analysis_failed", "detail": str(e)})
+        publish_ws_message(
+            chat_id,
+            {
+                "type": "error",
+                "request_id": request_id,
+                "code": "analysis_failed",
+                "detail": str(e),
+            },
+        )
         raise
 
-@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3})
+
+@celery_app.task(
+    bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3}
+)
 def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str):
     try:
         logger.info(f"[chat_turn] chat_id={chat_id} req={request_id}")
@@ -54,8 +88,19 @@ def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str):
         context = "\n\n---\n\n".join(ctx_parts[-3:]) if ctx_parts else "История короткая."
         answer = ask_llm(content, context)
         mid = add_message(chat_id, "assistant", answer, {})
-        publish_ws_message(chat_id, {"type": "final", "request_id": request_id, "message_id": mid, "content": answer})
+        publish_ws_message(
+            chat_id,
+            {"type": "final", "request_id": request_id, "message_id": mid, "content": answer},
+        )
     except Exception as e:
         logger.exception("chat_turn_pubsub failed")
-        publish_ws_message(chat_id, {"type": "error", "request_id": request_id, "code": "chat_turn_failed", "detail": str(e)})
+        publish_ws_message(
+            chat_id,
+            {
+                "type": "error",
+                "request_id": request_id,
+                "code": "chat_turn_failed",
+                "detail": str(e),
+            },
+        )
         raise

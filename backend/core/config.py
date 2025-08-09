@@ -15,7 +15,9 @@ REDIS_DB = int(os.getenv("REDIS_DB", 0))
 
 # Celery
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
-CELERY_BACKEND_URL = os.getenv("CELERY_BACKEND_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+CELERY_BACKEND_URL = os.getenv(
+    "CELERY_BACKEND_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+)
 
 # ClickHouse
 CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://clickhouse:8123/")

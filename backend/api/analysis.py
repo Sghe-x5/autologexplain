@@ -7,6 +7,7 @@ from schema import AnalysisStartRequest, AnalysisStartResponse
 
 router = APIRouter()
 
+
 @router.post("/start", response_model=AnalysisStartResponse, status_code=202)
 def start_analysis(req: AnalysisStartRequest):
     request_id = str(uuid.uuid4())

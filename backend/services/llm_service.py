@@ -10,6 +10,7 @@ def ask_llm(prompt: str, context: str) -> str:
     ]
     return random.choice(variants)
 
+
 def build_context(aggregates: dict, samples: list[dict]) -> str:
     total = aggregates.get("total", 0)
     errors = aggregates.get("errors", 0)
