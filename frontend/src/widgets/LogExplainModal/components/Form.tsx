@@ -156,7 +156,6 @@ const LogExplainForm = () => {
               name="startTime"
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Время начала</FormLabel>
                   <FormControl>
                     <div className={interactiveField}>
                       <DatePicker
@@ -167,6 +166,7 @@ const LogExplainForm = () => {
                     </div>
                   </FormControl>
                   <FormMessage />
+                  <FormLabel className="text-[#71717A] ml-2 font-[sans-serif]">Время начала</FormLabel>
                 </FormItem>
               )}
             />
@@ -175,7 +175,6 @@ const LogExplainForm = () => {
               name="endTime"
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Время окончания</FormLabel>
                   <FormControl>
                     <div className={interactiveField}>
                       <DatePicker
@@ -186,6 +185,7 @@ const LogExplainForm = () => {
                     </div>
                   </FormControl>
                   <FormMessage />
+                  <FormLabel className="text-[#71717A] ml-2 font-[sans-serif]">Время окончания</FormLabel>
                 </FormItem>
               )}
             />
