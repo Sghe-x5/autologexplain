@@ -3,16 +3,10 @@ on:
     - workflows: test-backend-workflow
       filter:
         paths: "backend/**"
-        target_branches:
-          - "main"
-          - "dev"
 
     - workflows: test-frontend-workflow
       filter:
         paths: "frontend/**"
-        target_branches:
-          - "main"
-          - "dev"
 
 workflows:
   test-backend-workflow:
