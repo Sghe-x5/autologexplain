@@ -1,29 +1,74 @@
-import os
+from __future__ import annotations
+
+from functools import lru_cache
 
 from dotenv import load_dotenv
+from pydantic import AliasChoices, Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
-# LLM
-AI_API_KEY = os.getenv("AI_API_KEY", "")
-AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
 
-# Redis
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_DB = int(os.getenv("REDIS_DB", 0))
+class Settings(BaseSettings):
+    AI_API_KEY: str = Field(default="", validation_alias=AliasChoices("AI_API_KEY"))
+    AI_MODEL: str = Field(default="gpt-4o-mini", validation_alias=AliasChoices("AI_MODEL"))
 
-# Celery
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
-CELERY_BACKEND_URL = os.getenv(
-    "CELERY_BACKEND_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-)
+    REDIS_HOST: str = Field(default="redis", validation_alias=AliasChoices("REDIS_HOST"))
+    REDIS_PORT: int = Field(default=6379, validation_alias=AliasChoices("REDIS_PORT"))
+    REDIS_DB: int = Field(default=0, validation_alias=AliasChoices("REDIS_DB"))
 
-# ClickHouse
-CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://clickhouse:8123/")
-CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "")
-CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
+    CELERY_BROKER_URL: str | None = Field(
+        default=None, validation_alias=AliasChoices("CELERY_BROKER_URL")
+    )
+    CELERY_BACKEND_URL: str | None = Field(
+        default=None, validation_alias=AliasChoices("CELERY_BACKEND_URL")
+    )
 
-# Limits
-MAX_PAGE_SIZE = 200
-MAX_HARD_LIMIT = 5000
+    CLICKHOUSE_HOST: str = Field(
+        default="localhost", validation_alias=AliasChoices("CLICKHOUSE_HOST")
+    )
+    CLICKHOUSE_PORT: int = Field(default=8123, validation_alias=AliasChoices("CLICKHOUSE_PORT"))
+    CLICKHOUSE_USER: str = Field(
+        default="default", validation_alias=AliasChoices("CLICKHOUSE_USER")
+    )
+    CLICKHOUSE_PASSWORD: str = Field(
+        default="", validation_alias=AliasChoices("CLICKHOUSE_PASSWORD")
+    )
+    CLICKHOUSE_DB: str = Field(default="default", validation_alias=AliasChoices("CLICKHOUSE_DB"))
+    CLICKHOUSE_TABLE: str = Field(default="logs", validation_alias=AliasChoices("CLICKHOUSE_TABLE"))
+
+    MAX_PAGE_SIZE: int = Field(default=200, validation_alias=AliasChoices("MAX_PAGE_SIZE"))
+    MAX_HARD_LIMIT: int = Field(default=5000, validation_alias=AliasChoices("MAX_HARD_LIMIT"))
+
+    TOKEN_SECRET: str = Field(default="secret", validation_alias=AliasChoices("TOKEN_SECRET"))
+    TOKEN_TTL_SECONDS: int = Field(
+        default=7 * 24 * 3600, validation_alias=AliasChoices("TOKEN_TTL_SECONDS")
+    )  # 7 дней
+    CHAT_TTL_SECONDS: int = Field(default=0, validation_alias=AliasChoices("CHAT_TTL_SECONDS"))
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def CLICKHOUSE_URL(self) -> str:
+        return f"http://{self.CLICKHOUSE_HOST}:{self.CLICKHOUSE_PORT}"
+
+    def _finalize(self) -> Settings:
+        if not self.CELERY_BROKER_URL:
+            self.CELERY_BROKER_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        if not self.CELERY_BACKEND_URL:
+            self.CELERY_BACKEND_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return self
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()._finalize()
+
+
+settings = get_settings()
