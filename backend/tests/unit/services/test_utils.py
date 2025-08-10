@@ -1,9 +1,9 @@
 import json
 from unittest.mock import MagicMock
 
-from services.utils import _r, publish_ws_message, mask_sensitive
-
 import redis
+
+from services.utils import _r, mask_sensitive, publish_ws_message
 
 
 def test_redis_client(mock_settings):
