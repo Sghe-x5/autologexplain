@@ -7,11 +7,12 @@ import pytest
 
 from db.storage import (
     RedisUnavailableError,
-    _now_iso, _refresh_ttl,
+    _now_iso,
+    _refresh_ttl,
     add_message,
     create_chat,
-    init_store, 
-    list_messages
+    init_store,
+    list_messages,
 )
 
 
