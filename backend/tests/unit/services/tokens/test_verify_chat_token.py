@@ -22,7 +22,7 @@ def test_verify_expired_token():
     expired_payload = {
         "chat_id": "expired_chat_123",
         "iat": int(time.time()) - 10000,
-        "exp": int(time.time()) - 3600
+        "exp": int(time.time()) - 3600,
     }
 
     p_bytes = json.dumps(expired_payload, separators=(",", ":")).encode("utf-8")
