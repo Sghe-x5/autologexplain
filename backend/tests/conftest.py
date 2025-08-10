@@ -14,7 +14,7 @@ def mock_settings(monkeypatch):
         host="test_host",
         port="6379",
         db="0",
-        chat_ttl="3600"
+        chat_ttl="3600",
     ):
         monkeypatch.setenv("TOKEN_SECRET", secret)
         monkeypatch.setenv("TOKEN_TTL_SECONDS", ttl)
