@@ -8,7 +8,7 @@ resource "yandex_compute_disk" "clickhouse-boot-disk-1" {
   name     = "clickhouse-boot-disk-1"
   type     = "network-hdd"
   zone     = local.zone
-  size     = "10"
+  size     = "100"
   image_id = data.yandex_compute_image.ubuntu_image.id
 }
 
