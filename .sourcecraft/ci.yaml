@@ -3,11 +3,9 @@ on:
     - workflows: test-backend-workflow
       filter:
         paths: "backend/**"
-
     - workflows: test-analytics-workflow
       filter:
-        paths: "analytics/**
-
+        paths: "analytics/**"
     - workflows: test-frontend-workflow
       filter:
         paths: "frontend/**"
