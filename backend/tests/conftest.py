@@ -1,6 +1,9 @@
+from unittest.mock import Mock
+
 import pytest
 
 from services import tokens
+from clickhouse_connect.driver.client import Client
 
 
 @pytest.fixture
@@ -11,6 +14,7 @@ def mock_settings(monkeypatch):
             host="test_host",
             port="6379",
             db="0",
+            chat_ttl="3600"
     ):
 
         monkeypatch.setenv("TOKEN_SECRET", secret)
@@ -18,6 +22,7 @@ def mock_settings(monkeypatch):
         monkeypatch.setenv("REDIS_HOST", host)
         monkeypatch.setenv("REDIS_PORT", port)
         monkeypatch.setenv("REDIS_DB", db)
+        monkeypatch.setenv("CHAT_TTL_SECONDS", chat_ttl)
 
         tokens.get_settings.cache_clear()
 
@@ -25,3 +30,11 @@ def mock_settings(monkeypatch):
 
     _mock_settings()
     return _mock_settings
+
+
+@pytest.fixture
+def mock_ch_client():
+    """Мок ClickHouse-клиента"""
+    mock = Mock(spec=Client)
+    mock.ping.return_value = True
+    return mock
