@@ -53,7 +53,7 @@ const mockData: UserLogExplanation = {
     "Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.",
 };
 
-const LogExplainForm = () => {
+const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
   const form = useForm<LogExplanation>({
     resolver: zodResolver(logFormSchema),
     defaultValues: {
@@ -64,12 +64,6 @@ const LogExplainForm = () => {
       endTime: new Date(),
     },
   });
-
-  const [filters, setFilters] = useState<FilterData[]>([]);
-
-  useEffect(() => {
-    GetFilters().then(setFilters);
-  }, []);
 
   const setLog = useLogStore((state) => state.setLog);
 
