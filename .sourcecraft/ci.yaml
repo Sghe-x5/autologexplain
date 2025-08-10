@@ -2,7 +2,7 @@ on:
   pull_request:
     - workflows: test-backend-workflow
       filter:
-        paths: "backend/**"
+        paths: ["backend/**","analytics/**"]
 
     - workflows: test-frontend-workflow
       filter:
