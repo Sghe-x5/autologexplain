@@ -115,7 +115,7 @@ const LogExplainForm = () => {
               >
                 <FormControl>
                   <SelectTrigger
-                    className={`w-full ${interactiveField}`}
+                    className={`w-full ${interactiveField} cursor-pointer`}
                   >
                     <SelectValue placeholder="Выберите продукт" />
                   </SelectTrigger>
@@ -150,7 +150,7 @@ const LogExplainForm = () => {
               >
                 <FormControl>
                   <SelectTrigger
-                    className={`w-full ${interactiveField}`}
+                    className={`w-full ${interactiveField} disabled:cursor-not-allowed [&:not(:disabled)]:cursor-pointer`}
                   >
                     <SelectValue placeholder="Выберите сервис" />
                   </SelectTrigger>
@@ -187,7 +187,7 @@ const LogExplainForm = () => {
               >
                 <FormControl>
                   <SelectTrigger
-                    className={`w-full ${interactiveField}`}
+                    className={`w-full ${interactiveField} disabled:cursor-not-allowed [&:not(:disabled)]:cursor-pointer`}
                   >
                     <SelectValue placeholder="Выберите окружение" />
                   </SelectTrigger>
