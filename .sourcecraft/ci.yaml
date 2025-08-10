@@ -52,7 +52,7 @@ tasks:
 
   - name: analytics-linters
     cubes:
-      - name: backend-linting
+      - name: analytics-linting
         image: python:3.11
         script:
           - pip install poetry==1.8.3
@@ -65,7 +65,7 @@ tasks:
           - poetry run mypy .
   - name: analytics-tests
     cubes:
-      - name: backend-tests
+      - name: analytics-tests
         image: python:3.11
         script:
           - pip install poetry==1.8.3
