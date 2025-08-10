@@ -53,36 +53,43 @@ const LogExplainForm = () => {
   const form = useForm<LogExplanation>({
     resolver: zodResolver(logFormSchema),
     defaultValues: {
+      product: "",
       service: "",
-      userID: "",
+      environment: "",
+      // userID: "",
       startTime: new Date(),
       endTime: new Date(),
     },
   });
 
   const setLog = useLogStore((state) => state.setLog);
-  // const resetLog = useLogStore((state) => state.reset);
+  const resetLog = useLogStore((state) => state.reset);
+
+  const watchProduct = form.watch("product");
+  const watchService = form.watch("service");
+  const watchEnvironment = form.watch("environment");
 
   const onSubmit = (values: LogExplanation) => {
-    mockData.userId = Number(values.userID);
+    mockData.userId = 123;
     mockData.period = getPeriod({
       startTime: values.startTime,
       endTime: values.endTime,
     });
-
     setLog(mockData);
   };
 
-  // const onReset = () => {
-  //   form.reset();
-  //   resetLog();
-  // };
+  const onReset = () => {
+    form.reset();
+    resetLog();
+  };
+
   const interactiveField =
     "border border-gray-300 rounded-md transition-colors duration-200 " +
     "hover:border-[#2463EB] focus-within:border-[#2463EB] " +
     "focus-within:ring-2 focus-within:ring-[#93C5FD]/40";
 
-  const isFormFiled = !form.formState.isValid || form.formState.isSubmitting;
+  const isFormDisabled =
+    !form.formState.isValid || form.formState.isSubmitting;
 
   return (
     <Form {...form}>
@@ -92,36 +99,31 @@ const LogExplainForm = () => {
       >
         <FormField
           control={form.control}
-          name="service"
+          name="product"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Сервис</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <FormLabel>Продукт</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  form.setValue("service", "");
+                  form.setValue("environment", "");
+                  form.setValue("startTime", new Date());
+                  form.setValue("endTime", new Date());
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger
                     className={`w-full ${interactiveField}`}
-                    data-test-id="analised-service-select"
                   >
-                    <SelectValue
-                      placeholder="Выберите сервис для анализа"
-                      data-test-id="selected-service-span"
-                    />
+                    <SelectValue placeholder="Выберите продукт" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="catService">catService</SelectItem>
-                    <SelectItem value="paymentService">
-                      paymentService
-                    </SelectItem>
-                    <SelectItem value="userService">userService</SelectItem>
-                    <SelectItem value="orderService">orderService</SelectItem>
-                    <SelectItem value="inventoryService">
-                      inventoryService
-                    </SelectItem>
-                    <SelectItem value="notificationService">
-                      notificationService
-                    </SelectItem>
+                    <SelectItem value="productA">Product A</SelectItem>
+                    <SelectItem value="productB">Product B</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -132,24 +134,79 @@ const LogExplainForm = () => {
 
         <FormField
           control={form.control}
-          name="userID"
+          name="service"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>ID пользователя</FormLabel>
-              <FormControl data-test-id="identifier-input">
-                <Input
-                  placeholder="Введите userId, sessionId или идентификатор"
-                  {...field}
-                  className={interactiveField}
-                />
-              </FormControl>
+              <FormLabel>Сервис</FormLabel>
+              <Select
+                disabled={!watchProduct}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  form.setValue("environment", "");
+                  form.setValue("startTime", new Date());
+                  form.setValue("endTime", new Date());
+                }}
+                value={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger
+                    className={`w-full ${interactiveField}`}
+                  >
+                    <SelectValue placeholder="Выберите сервис" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="catService">catService</SelectItem>
+                    <SelectItem value="paymentService">
+                      paymentService
+                    </SelectItem>
+                    <SelectItem value="userService">userService</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="environment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Окружение</FormLabel>
+              <Select
+                disabled={!watchService}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  form.setValue("startTime", new Date());
+                  form.setValue("endTime", new Date());
+                }}
+                value={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger
+                    className={`w-full ${interactiveField}`}
+                  >
+                    <SelectValue placeholder="Выберите окружение" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="dev">DEV</SelectItem>
+                    <SelectItem value="stage">STAGE</SelectItem>
+                    <SelectItem value="prod">PROD</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
 
         <FormItem>
-          <FormLabel>Укажите период для анализа</FormLabel>
+          <FormLabel>Период</FormLabel>
           <div className="flex gap-4">
             <FormField
               control={form.control}
@@ -158,15 +215,19 @@ const LogExplainForm = () => {
                 <FormItem className="flex-1">
                   <FormControl>
                     <div className={interactiveField}>
-                      <DatePicker
-                        label=""
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
+                      <div className={!watchEnvironment ? "pointer-events-none opacity-50" : ""}>
+                        <DatePicker
+                          label=""
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </div>
                     </div>
                   </FormControl>
                   <FormMessage />
-                  <FormLabel className="text-[#71717A] ml-2 font-[sans-serif]">Время начала</FormLabel>
+                  <FormLabel className="text-[#71717A] ml-2">
+                    Время начала
+                  </FormLabel>
                 </FormItem>
               )}
             />
@@ -177,15 +238,19 @@ const LogExplainForm = () => {
                 <FormItem className="flex-1">
                   <FormControl>
                     <div className={interactiveField}>
-                      <DatePicker
-                        label=""
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
+                      <div className={!watchEnvironment ? "pointer-events-none opacity-50" : ""}>
+                        <DatePicker
+                          label=""
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </div>
                     </div>
                   </FormControl>
                   <FormMessage />
-                  <FormLabel className="text-[#71717A] ml-2 font-[sans-serif]">Время окончания</FormLabel>
+                  <FormLabel className="text-[#71717A] ml-2">
+                    Время окончания
+                  </FormLabel>
                 </FormItem>
               )}
             />
@@ -196,24 +261,20 @@ const LogExplainForm = () => {
 
         <div className="flex gap-2">
           <Button
-            data-test-id="analyse-logs-button"
             type="submit"
             className="flex-[11] bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
-            disabled={isFormFiled}
+            disabled={isFormDisabled}
           >
             <Sparkles /> Анализировать логи
           </Button>
-          {/* 
-    <Button
-      data-test-id="reset-form-button"
-      type="button"
-      className="flex-[1]"
-      variant="secondary"
-      onClick={onReset}
-    >
-      Сбросить
-    </Button> 
-    */}
+          <Button
+            type="button"
+            className="flex-[1]"
+            variant="secondary"
+            onClick={onReset}
+          >
+            Сбросить
+          </Button>
         </div>
       </form>
     </Form>

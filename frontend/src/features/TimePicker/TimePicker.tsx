@@ -90,9 +90,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
 
   return (
     <div className="flex flex-col gap-4 p-3">
-      {/* Новый блок с отображением времени и кнопками */}
       <div className="flex justify-center items-center gap-2">
-        {/* Часы */}
         <div
           className="flex w-14 h-[28px] relative border border-input rounded-md shadow-xs select-none"
           tabIndex={-1}
@@ -125,7 +123,6 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
 
         <span className="text-xl font-semibold select-none relative top-[-2px]">:</span>
 
-        {/* Минуты */}
         <div
           className="flex w-14 h-[28px] relative border border-input rounded-md shadow-xs select-none"
           tabIndex={-1}
@@ -157,7 +154,6 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
         </div>
       </div>
 
-      {/* Колонки часов и минут (оставляем как есть) */}
       <div className="flex gap-1 h-[250px] items-center">
         <div
           data-test-id="input-hour-div"
