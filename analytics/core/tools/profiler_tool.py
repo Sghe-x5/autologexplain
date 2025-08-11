@@ -1,23 +1,21 @@
-# core/tools/profiler_tool.py
-from langchain.tools import tool
-from pydantic.v1 import BaseModel, Field
-from typing import List
-from core.db.database import get_clickhouse_client
 import json
+
+from langchain.tools import tool
+from pydantic import BaseModel, Field
+
+from core.db.database import get_clickhouse_client
 
 # Список колонок, которые безопасно и полезно профилировать.
 # Это защищает от попытки получить DISTINCT от миллиардов уникальных сообщений.
-ALLOWED_PROFILING_COLUMNS = [
-    'product',
-    'service',
-    'environment',
-    'level',
-    'method',
-    'status_code'
-]
+ALLOWED_PROFILING_COLUMNS = ["product", "service", "environment", "level", "method", "status_code"]
+
 
 class DataProfilerArgs(BaseModel):
-    column_name: str = Field(..., description=f"Имя колонки для получения уникальных значений. Доступные колонки: {', '.join(ALLOWED_PROFILING_COLUMNS)}")
+    column_name: str = Field(
+        ...,
+        description=f"Имя колонки для получения уникальных значений. Доступные колонки: {', '.join(ALLOWED_PROFILING_COLUMNS)}",
+    )
+
 
 @tool("data-profiler", args_schema=DataProfilerArgs)
 def data_profiler(column_name: str) -> str:
@@ -33,15 +31,15 @@ def data_profiler(column_name: str) -> str:
     client = get_clickhouse_client()
     # Запрос оптимизирован для быстрого получения небольшого числа уникальных значений
     query = f"SELECT DISTINCT {column_name} FROM logs LIMIT 100"
-    
+
     try:
         result = client.query(query)
         if result.row_count == 0:
             return f"Для колонки '{column_name}' не найдено уникальных значений."
-        
+
         # Преобразуем результат в простой список
         distinct_values = [row[0] for row in result.result_rows]
-        
+
         json_output = json.dumps(distinct_values, indent=2, ensure_ascii=False)
         return f"Инструмент 'data-profiler' успешно выполнен. Уникальные значения для колонки '{column_name}':\n```json\n{json_output}\n```"
 
