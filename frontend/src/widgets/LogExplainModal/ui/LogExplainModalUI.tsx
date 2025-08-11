@@ -7,8 +7,16 @@ import { type AppDispatch } from "@/lib/store";
 import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
 import { useLogStore } from "../model/store";
 import { Button } from "@/components/ui/button";
+import { type FilterData, GetFilters } from "@/api/getFilters";
+import { useState, useEffect } from "react";
 
 export const LogExplainUI = () => {
+  const [filters, setFilters] = useState<FilterData[]>([]);
+  const [isFiltersLoaded, setFiltersLoaded] = useState<boolean>(false);
+  useEffect(() => {
+    GetFilters().then(setFilters).then(() => setFiltersLoaded(true));
+  }, []);
+
   const dispatch = useDispatch<AppDispatch>();
   const hasLog = useLogStore((state) => state.log) !== null;
 
@@ -56,12 +64,21 @@ export const LogExplainUI = () => {
         )}
 
         <Separator className="my-5" />
-        {!hasLog && (
-          <section>
-            <LogExplainForm />
-          </section>
-        )}
-        {hasLog && <ChatWithAI />}
+        {!isFiltersLoaded
+        ?
+        <>
+          <span className="loader"></span>
+        </>
+        : 
+        <>
+          {!hasLog && (
+            <section>
+              <LogExplainForm filters={filters}/>
+            </section>
+          )}
+          {hasLog && <ChatWithAI />}
+        </>
+        }
       </div>
   );
 };

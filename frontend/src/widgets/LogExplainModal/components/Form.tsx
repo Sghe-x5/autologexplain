@@ -30,7 +30,9 @@ import { useLogStore } from "../model/store";
 import { getPeriod } from "@/lib/getPeriod";
 import { Sparkles } from "lucide-react";
 
-import { FILTERS } from "@/mocks/filter.mock";
+import { FILTERS_MOCK } from "@/mocks/filter.mock";
+import { GetFilters, type FilterData } from "@/api/getFilters";
+import { useEffect, useState } from "react";
 
 const mockData: UserLogExplanation = {
   userId: 123,
@@ -51,7 +53,7 @@ const mockData: UserLogExplanation = {
     "Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.",
 };
 
-const LogExplainForm = () => {
+const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
   const form = useForm<LogExplanation>({
     resolver: zodResolver(logFormSchema),
     defaultValues: {
@@ -86,7 +88,7 @@ const LogExplainForm = () => {
   const isFormDisabled =
     !form.formState.isValid || form.formState.isSubmitting;
 
-  const productData = FILTERS.find((p) => p.product === watchProduct);
+  const productData = filters.find((p) => p.product === watchProduct);
   const serviceData = productData?.services.find(
     (s) => s.service === watchService
   );
@@ -122,7 +124,7 @@ const LogExplainForm = () => {
                 </FormControl>
                 <SelectContent>
                   <SelectGroup>
-                    {FILTERS.map((p) => (
+                    {filters.map((p) => (
                       <SelectItem key={p.product} value={p.product} className="cursor-pointer">
                         {p.product}
                       </SelectItem>
