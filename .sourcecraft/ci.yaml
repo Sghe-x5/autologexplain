@@ -146,7 +146,7 @@ tasks:
           - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
           - pytest --alluredir=allure-results
           
-          - apt-get install -y openjdk-11-jre-headless wget
+          - apt-get install -y openjdk-11-jre-headless wget zip
 
           - wget https://github.com/allure-framework/allure2/releases/download/2.34.1/allure-2.34.1.tgz
           - tar -zxvf allure-2.34.1.tgz
