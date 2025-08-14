@@ -2,7 +2,7 @@ on:
   pull_request:
     - workflows: test-backend-workflow
       filter:
-        paths: "backend/**"
+        paths: ["backend/**", "testing/**"]
     - workflows: test-analytics-workflow
       filter:
         paths: "analytics/**"
@@ -12,7 +12,7 @@ on:
   push:
     - workflows: ["test-backend-workflow", "build-backend-workflow"]
       filter:
-        paths: "backend/**"
+        paths: ["backend/**", "testing/**"]
         branches: "main"
     - workflows: ["test-analytics-workflow", "build-analytics-workflow"]
       filter:
@@ -124,6 +124,24 @@ tasks:
           - cd backend
           - poetry install --no-interaction --no-ansi
           - poetry run pytest
+      - name: api-tests
+        script:
+          - apt install python3.12 python3.12-venv
+          - cd backend
+          - docker-compose up -d --build
+          - cd testing/api_tests
+          - python3.12 -m venv .venv
+          - source .venv/bin/activate
+          - pip install -r requirements.txt
+          - cp .env.example .env
+          - sed -i 's/api_base_url/http:\/\/localhost:8000\//g' .env
+          - pytest --alluredir=allure-results
+          - allure generate allure-results --clean -o allure-report
+          - ls -la allure-report
+        artifacts:
+          paths:
+            - testing/allure-report
+            - testing/allure-results
 
   - name: analytics-linters
     cubes:
