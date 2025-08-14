@@ -145,11 +145,23 @@ tasks:
           - cp .env.example .env
           - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
           - pytest --alluredir=allure-results
-          - ls -la allure-results
+
+          - apt-get update
+          - apt install allure -y
+          - allure generate allure-results --clean -o allure-report
+          
+          - apt-get install -y openjdk-11-jre-headless wget
+
+          - wget https://github.com/allure-framework/allure2/releases/download/2.34.1/allure-2.34.1.tgz
+          - tar -zxvf allure-2.34.1.tgz
+          
+          - ./allure-2.34.1/bin/allure generate allure-results --clean -o allure-report
+          - zip -r allure-report.zip allure-report
+          - zip -r allure-results.zip allure-results
         artifacts:
           paths:
-            - testing/api_tests/allure-report
-            - testing/api_tests/allure-results
+            - testing/api_tests/allure-report.zip
+            - testing/api_tests/allure-results.zip
 
   - name: analytics-linters
     cubes:
