@@ -141,7 +141,7 @@ tasks:
           - source .venv/bin/activate
           - pip install -r requirements.txt
           - cp .env.example .env
-          - sed -i 's/api_base_url/http:\/\/localhost:8000\//g' .env
+          - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
           - pytest --alluredir=allure-results
           - allure generate allure-results --clean -o allure-report
           - ls -la allure-report
