@@ -130,13 +130,13 @@ tasks:
           - poetry run pytest
       - name: api-tests
         script:
-          - cd backend
+          - cd $SOURCECRAFT_WORKSPACE/backend
           - cp .env.example .env
           - sed -i 's/your-clickhouse-host-here/$CLICKHOUSE_HOST/g' .env
           - sed -i 's/your-password-here/$CLICKHOUSE_PASSWORD/g' .env
           - sed -i 's/your-token-here/$WS_TOKEN/g' .env
           - docker-compose up -d --build
-          - cd testing/api_tests
+          - cd $SOURCECRAFT_WORKSPACE/testing/api_tests
           - python -m venv .venv
           - source .venv/bin/activate
           - pip install -r requirements.txt
