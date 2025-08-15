@@ -1,4 +1,3 @@
-import { FormInput as Input } from "./FormInput";
 import DatePicker from "@/features/DatePicker/DatePicker";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +29,7 @@ import { useLogStore } from "../model/store";
 import { getPeriod } from "@/lib/getPeriod";
 import { Sparkles } from "lucide-react";
 
-import { FILTERS_MOCK } from "@/mocks/filter.mock";
-import { GetFilters, type FilterData } from "@/api/getFilters";
-import { useEffect, useState } from "react";
+import { type FilterData } from "@/api/getFilters";
 
 const mockData: UserLogExplanation = {
   userId: 123,
@@ -53,7 +50,7 @@ const mockData: UserLogExplanation = {
     "Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.",
 };
 
-const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
+const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
   const form = useForm<LogExplanation>({
     resolver: zodResolver(logFormSchema),
     defaultValues: {
@@ -85,8 +82,7 @@ const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
     "hover:border-[#2463EB] focus-within:border-[#2463EB] " +
     "focus-within:ring-2 focus-within:ring-[#93C5FD]/40";
 
-  const isFormDisabled =
-    !form.formState.isValid || form.formState.isSubmitting;
+  const isFormDisabled = !form.formState.isValid || form.formState.isSubmitting;
 
   const productData = filters.find((p) => p.product === watchProduct);
   const serviceData = productData?.services.find(
@@ -125,7 +121,11 @@ const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
                 <SelectContent>
                   <SelectGroup>
                     {filters.map((p) => (
-                      <SelectItem key={p.product} value={p.product} className="cursor-pointer">
+                      <SelectItem
+                        key={p.product}
+                        value={p.product}
+                        className="cursor-pointer"
+                      >
                         {p.product}
                       </SelectItem>
                     ))}
@@ -163,7 +163,11 @@ const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
                 <SelectContent>
                   <SelectGroup>
                     {productData?.services.map((s) => (
-                      <SelectItem key={s.service} value={s.service} className="cursor-pointer">
+                      <SelectItem
+                        key={s.service}
+                        value={s.service}
+                        className="cursor-pointer"
+                      >
                         {s.service}
                       </SelectItem>
                     ))}
@@ -200,7 +204,11 @@ const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
                 <SelectContent>
                   <SelectGroup>
                     {serviceData?.environments.map((env) => (
-                      <SelectItem key={env} value={env} className="cursor-pointer">
+                      <SelectItem
+                        key={env}
+                        value={env}
+                        className="cursor-pointer"
+                      >
                         {env}
                       </SelectItem>
                     ))}
@@ -291,4 +299,3 @@ const LogExplainForm = ({filters} : {filters : FilterData[]}) => {
 };
 
 export { LogExplainForm };
-

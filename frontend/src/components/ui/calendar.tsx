@@ -1,14 +1,14 @@
-import * as React from "react"
+import * as React from "react";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-} from "lucide-react"
-import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
+} from "lucide-react";
+import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
-import { cn } from "@/lib/utils"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function Calendar({
   className,
@@ -20,9 +20,9 @@ function Calendar({
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
-  const defaultClassNames = getDefaultClassNames()
+  const defaultClassNames = getDefaultClassNames();
 
   return (
     <DayPicker
@@ -35,13 +35,13 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) =>
-          { const localed = date.toLocaleDateString("default", { month: "long"});
-            return localed[0].toUpperCase() + localed.substring(1)},
+        formatMonthDropdown: (date) => {
+          const localed = date.toLocaleDateString("default", { month: "long" });
+          return localed[0].toUpperCase() + localed.substring(1);
+        },
         ...formatters,
       }}
       classNames={{
-        
         root: cn("w-[276px]", defaultClassNames.root),
         months: cn(
           "flex gap-4 flex-col md:flex-row relative",
@@ -126,13 +126,13 @@ function Calendar({
               className={cn(className)}
               {...props}
             />
-          )
+          );
         },
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
               <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-            )
+            );
           }
 
           if (orientation === "right") {
@@ -141,12 +141,12 @@ function Calendar({
                 className={cn("size-4", className)}
                 {...props}
               />
-            )
+            );
           }
 
           return (
             <ChevronDownIcon className={cn("size-4", className)} {...props} />
-          )
+          );
         },
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }) => {
@@ -156,7 +156,7 @@ function Calendar({
                 {children}
               </div>
             </td>
-          )
+          );
         },
         MonthsDropdown: ({ options, classNames, value, onChange }) => (
           <MonthYearInputs
@@ -164,15 +164,24 @@ function Calendar({
             min={0}
             max={11}
             onChange={onChange!}
-            options={options?.map((o) => ({ label: o.label, value: Number(o.value) }))}
+            options={options?.map((o) => ({
+              label: o.label,
+              value: Number(o.value),
+            }))}
             classNames={classNames}
           />
         ),
 
         YearsDropdown: ({ options, classNames, value, onChange }) => {
-          const numericOptions = options?.map((o) => ({ label: o.label, value: Number(o.value) })) || []
-          const minYear = numericOptions.length ? Math.min(...numericOptions.map((o) => o.value)) : 1900
-          const maxYear = numericOptions.length ? Math.max(...numericOptions.map((o) => o.value)) : 2100
+          const numericOptions =
+            options?.map((o) => ({ label: o.label, value: Number(o.value) })) ||
+            [];
+          const minYear = numericOptions.length
+            ? Math.min(...numericOptions.map((o) => o.value))
+            : 1900;
+          const maxYear = numericOptions.length
+            ? Math.max(...numericOptions.map((o) => o.value))
+            : 2100;
           return (
             <MonthYearInputs
               value={Number(value)}
@@ -182,14 +191,14 @@ function Calendar({
               options={numericOptions}
               classNames={classNames}
             />
-          )
+          );
         },
 
         ...components,
       }}
       {...props}
     />
-  )
+  );
 }
 
 function CalendarDayButton({
@@ -198,12 +207,10 @@ function CalendarDayButton({
   modifiers,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
-  const defaultClassNames = getDefaultClassNames()
-
-  const ref = React.useRef<HTMLButtonElement>(null)
+  const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
-  }, [modifiers.focused])
+    if (modifiers.focused) ref.current?.focus();
+  }, [modifiers.focused]);
 
   return (
     <Button
@@ -228,18 +235,17 @@ function CalendarDayButton({
       )}
       {...props}
     />
-  )
+  );
 }
-
 
 type MonthYearInputsProps = {
-  value: number
-  min: number
-  max: number
-  onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void
-  options?: { label: string; value: number }[]
-  classNames?: any
-}
+  value: number;
+  min: number;
+  max: number;
+  onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  options?: { label: string; value: number }[];
+  classNames?: any;
+};
 
 function MonthYearInputs({
   value,
@@ -252,7 +258,7 @@ function MonthYearInputs({
   function createSyntheticEvent(newValue: number) {
     return {
       target: { value: newValue.toString() },
-    } as React.ChangeEvent<HTMLSelectElement>
+    } as React.ChangeEvent<HTMLSelectElement>;
   }
 
   return (
@@ -270,7 +276,9 @@ function MonthYearInputs({
         <button
           type="button"
           tabIndex={-1}
-          onClick={() => onChange(createSyntheticEvent(value - 1 < min ? max : value - 1))}
+          onClick={() =>
+            onChange(createSyntheticEvent(value - 1 < min ? max : value - 1))
+          }
           className="p-0 m-0 text-sm select-none flex items-center justify-center"
           aria-label="Decrease"
         >
@@ -279,7 +287,9 @@ function MonthYearInputs({
         <button
           type="button"
           tabIndex={-1}
-          onClick={() => onChange(createSyntheticEvent(value + 1 > max ? min : value + 1))}
+          onClick={() =>
+            onChange(createSyntheticEvent(value + 1 > max ? min : value + 1))
+          }
           className="p-0 m-0 text-sm select-none flex items-center justify-center"
           aria-label="Increase"
         >
@@ -287,11 +297,7 @@ function MonthYearInputs({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-
-
-
-
-export { Calendar, CalendarDayButton }
+export { Calendar, CalendarDayButton };
