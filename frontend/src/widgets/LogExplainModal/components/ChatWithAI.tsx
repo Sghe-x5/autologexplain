@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/button";
 import { Bot } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -8,13 +8,12 @@ import {
   useNewChatMutation,
   useStreamChatQuery,
   useChatTurnMutation,
+  type ChatItem,
 } from "../model/WebSocket/chat.api";
 import { WS_BASE } from "../model/WebSocket/consts";
 
 export const ChatWithAI = () => {
-  const [messages, setMessages] = useState<
-    { id: string; role: "user" | "assistant"; text: string }[]
-  >([]);
+  const [messages, setMessages] = useState<ChatItem[]>([]);
 
   const [input, setInput] = useState("");
 
@@ -46,8 +45,8 @@ export const ChatWithAI = () => {
         // Добавляем только новые сообщения, которых еще нет в prev по id
         const existingIds = new Set(prev.map((m) => m.id));
         const newMessages = data.items
-          .filter((m: any) => !existingIds.has(m.id))
-          .map((m: any) => ({
+          .filter((m: ChatItem) => !existingIds.has(m.id))
+          .map((m: ChatItem) => ({
             ...m,
             text: m.text
               .replace(/^```json\n/, "")
@@ -69,7 +68,7 @@ export const ChatWithAI = () => {
     setInput("");
     setMessages([
       ...messages,
-      { id: crypto.randomUUID(), role: "user", text: input.trim() },
+      { id: crypto.randomUUID(), role: "user", text: input.trim() } as ChatItem,
     ]);
   };
 

@@ -4,6 +4,21 @@ import { wsRegistry } from "./wsRegistry";
 type NewChatResp = { chat_id: string; token: string };
 type RenewResp = { token: string };
 
+export type ChatItem = {
+  role: string;
+  id: string;
+  requestId: string;
+  text: string;
+  pending: boolean;
+};
+
+type ChatData = {
+  chatId: string;
+  connected: boolean;
+  items: ChatItem[];
+  pending: Record<string, unknown>;
+};
+
 export const chatApi = createApi({
   reducerPath: "chatApi",
   baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:8080" }),
@@ -22,7 +37,7 @@ export const chatApi = createApi({
     }),
 
     streamChat: build.query<
-      any,
+      ChatData,
       { chatId: string; token: string; wsUrl: string }
     >({
       queryFn: () => ({
@@ -92,7 +107,12 @@ export const chatApi = createApi({
       async queryFn({ chatId, payload }) {
         const ws = wsRegistry.get(chatId);
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-          return { error: { status: "WS_CLOSED" } as any };
+          return {
+            error: {
+              status: "CUSTOM_ERROR",
+              error: "WebSocket connection closed",
+            },
+          };
         }
 
         const request_id = crypto.randomUUID();
@@ -117,7 +137,12 @@ export const chatApi = createApi({
       async queryFn({ chatId, content }) {
         const ws = wsRegistry.get(chatId);
         if (!ws || ws.readyState !== WebSocket.OPEN)
-          return { error: { status: "WS_CLOSED" } as any };
+          return {
+            error: {
+              status: "CUSTOM_ERROR",
+              error: "WebSocket connection closed",
+            },
+          };
 
         const request_id = crypto.randomUUID();
         ws.send(JSON.stringify({ type: "chat_turn", request_id, content }));

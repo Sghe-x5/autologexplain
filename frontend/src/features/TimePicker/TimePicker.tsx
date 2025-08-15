@@ -36,7 +36,13 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
       minuteRef.current.scrollTop =
         middleIndexMinutes * itemHeight + (time.minutes * itemHeight) / 3;
     }
-  }, []);
+  }, [
+    middleIndexHours,
+    middleIndexMinutes,
+    time.hours,
+    time.minutes,
+    itemHeight,
+  ]);
 
   const loopScroll = (
     ref: React.RefObject<HTMLDivElement | null>,
