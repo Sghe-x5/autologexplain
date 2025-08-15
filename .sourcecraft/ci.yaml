@@ -79,7 +79,7 @@ tasks:
               --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
               --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
               --push \
-              .
+              $SOURCECRAFT_WORKSPACE/analytics
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -116,7 +116,7 @@ tasks:
               --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
               --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
               --push \
-              .
+              $SOURCECRAFT_WORKSPACE/backend
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -153,7 +153,7 @@ tasks:
               --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
               --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
               --push \
-              .
+              $SOURCECRAFT_WORKSPACE/frontend
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
