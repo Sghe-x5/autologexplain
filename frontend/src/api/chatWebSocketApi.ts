@@ -1,9 +1,14 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { wsRegistry } from "@/lib/model/wsRegistry";
-import type { ChatData } from "@/lib/chat.schemas";
+import type { ChatData, TServerMsg } from "@/lib/chat.schemas";
 import { WS_BASE } from "@/consts/api.const";
 
-function handleChatMessage(msg: any, updateCachedData: any) {
+type UpdateCachedData = (recipe: (draft: ChatData) => void) => void;
+
+function handleChatMessage(
+  msg: TServerMsg,
+  updateCachedData: UpdateCachedData
+) {
   updateCachedData((draft: ChatData) => {
     if (!draft.items) draft.items = [];
     if (msg.type === "final") {

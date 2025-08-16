@@ -1,4 +1,5 @@
 import { WS_BASE } from "@/consts/api.const";
+import type { TServerMsg } from "@/lib/chat.schemas";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const wsApi = createApi({
@@ -10,7 +11,7 @@ export const wsApi = createApi({
       { connected: boolean; ws: WebSocket | null },
       {
         url: string;
-        onMessage?: (msg: any) => void;
+        onMessage?: (msg: TServerMsg) => void;
         onOpen?: () => void;
         onClose?: () => void;
       }
