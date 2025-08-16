@@ -21,6 +21,7 @@ python-dotenv = "*"
 pydantic-settings = "^2.10.1"
 clickhouse-connect = "^0.8.18"
 pydantic = "^2.11.7"
+prometheus-fastapi-instrumentator = "*"
 
 # --- analytics ---
 langchain = "^0.3.0"
