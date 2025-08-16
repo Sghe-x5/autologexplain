@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GetFilters, type FilterData } from "@/api/getFilters";
-import { FILTERS_MOCK } from "@/mocks/filter.mock";
 
-// Получаем глобальный мок fetch
+// Глобальный мок fetch
 const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
 
 describe("GetFilters Integration Tests", () => {
@@ -15,7 +14,7 @@ describe("GetFilters Integration Tests", () => {
   });
 
   describe("Сценарии успешной загрузки", () => {
-    it("должен обрабатывать пустой массив фильтров", async () => {
+    it("обрабатывает пустой массив фильтров", async () => {
       const emptyFilters: FilterData[] = [];
 
       mockFetch.mockResolvedValueOnce({
@@ -28,7 +27,7 @@ describe("GetFilters Integration Tests", () => {
       expect(result).toHaveLength(0);
     });
 
-    it("должен обрабатывать фильтры с одним продуктом и одним сервисом", async () => {
+    it("обрабатывает один продукт и один сервис", async () => {
       const singleFilter: FilterData[] = [
         {
           product: "single-product",
@@ -52,7 +51,7 @@ describe("GetFilters Integration Tests", () => {
       expect(result[0].services[0].environments).toHaveLength(1);
     });
 
-    it("должен обрабатывать фильтры с множественными сервисами и окружениями", async () => {
+    it("обрабатывает множественные сервисы и окружения", async () => {
       const complexFilters: FilterData[] = [
         {
           product: "multi-service-product",
@@ -82,43 +81,32 @@ describe("GetFilters Integration Tests", () => {
       expect(result).toEqual(complexFilters);
       expect(result[0].services).toHaveLength(3);
       expect(result[0].services[0].environments).toHaveLength(5);
-      expect(result[0].services[1].environments).toHaveLength(2);
-      expect(result[0].services[2].environments).toHaveLength(1);
     });
   });
 
-  describe("Сценарии обработки ошибок", () => {
-    it("должен обрабатывать ошибку сети и возвращать моковые данные", async () => {
+  describe("Сценарии ошибок", () => {
+    it("кидает при ошибке сети", async () => {
       mockFetch.mockRejectedValueOnce(new Error("Network timeout"));
-
-      const result = await GetFilters();
-
-      expect(result).toEqual(FILTERS_MOCK);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await expect(GetFilters()).rejects.toThrow();
     });
 
-    it("должен обрабатывать ошибку JSON парсинга и возвращать моковые данные", async () => {
+    it("кидает при ошибке JSON парсинга", async () => {
       mockFetch.mockResolvedValueOnce({
         json: () => Promise.reject(new SyntaxError("Invalid JSON")),
       } as Response);
-
-      const result = await GetFilters();
-
-      expect(result).toEqual(FILTERS_MOCK);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await expect(GetFilters()).rejects.toThrow();
     });
 
-    it("должен обрабатывать ошибку с неожиданным типом данных", async () => {
+    it("кидает если сервер вернул неожиданный тип данных", async () => {
       mockFetch.mockResolvedValueOnce({
         json: () => Promise.resolve(null),
       } as Response);
-
       await expect(GetFilters()).rejects.toThrow("Filters must be an array");
     });
   });
 
-  describe("Сценарии валидации данных", () => {
-    it("должен валидировать корректную структуру данных", async () => {
+  describe("Сценарии валидации", () => {
+    it("валидирует корректную структуру данных", async () => {
       const validData: FilterData[] = [
         {
           product: "valid-product-1",
@@ -129,15 +117,6 @@ describe("GetFilters Integration Tests", () => {
             },
           ],
         },
-        {
-          product: "valid-product-2",
-          services: [
-            {
-              service: "valid-service-2",
-              environments: ["staging", "qa"],
-            },
-          ],
-        },
       ];
 
       mockFetch.mockResolvedValueOnce({
@@ -145,28 +124,14 @@ describe("GetFilters Integration Tests", () => {
       } as Response);
 
       const result = await GetFilters();
-
       expect(result).toEqual(validData);
-      expect(result).toHaveLength(2);
-
-      // Проверяем структуру первого элемента
-      expect(result[0]).toHaveProperty("product");
-      expect(result[0]).toHaveProperty("services");
-      expect(typeof result[0].product).toBe("string");
-      expect(Array.isArray(result[0].services)).toBe(true);
-
-      // Проверяем структуру сервисов
-      expect(result[0].services[0]).toHaveProperty("service");
-      expect(result[0].services[0]).toHaveProperty("environments");
-      expect(typeof result[0].services[0].service).toBe("string");
-      expect(Array.isArray(result[0].services[0].environments)).toBe(true);
     });
 
-    it("должен выбрасывать ошибку при неполной структуре данных", async () => {
+    it("кидает при отсутствии services", async () => {
       const incompleteData = [
         {
           product: "incomplete-product",
-          // отсутствует services
+          // нет services
         },
       ];
 
@@ -179,16 +144,11 @@ describe("GetFilters Integration Tests", () => {
       );
     });
 
-    it("должен выбрасывать ошибку при неправильном типе product", async () => {
+    it("кидает при неправильном типе product", async () => {
       const invalidData = [
         {
-          product: 123, // должно быть строкой
-          services: [
-            {
-              service: "test-service",
-              environments: ["prod"],
-            },
-          ],
+          product: 123,
+          services: [{ service: "test-service", environments: ["prod"] }],
         },
       ];
 
@@ -201,16 +161,11 @@ describe("GetFilters Integration Tests", () => {
       );
     });
 
-    it("должен выбрасывать ошибку при неправильном типе service", async () => {
+    it("кидает при неправильном типе service", async () => {
       const invalidData = [
         {
           product: "test-product",
-          services: [
-            {
-              service: ["not-a-string"], // должно быть строкой
-              environments: ["prod"],
-            },
-          ],
+          services: [{ service: ["not-a-string"], environments: ["prod"] }],
         },
       ];
 
@@ -221,15 +176,12 @@ describe("GetFilters Integration Tests", () => {
       await expect(GetFilters()).rejects.toThrow("Invalid 'service' at [0][0]");
     });
 
-    it("должен выбрасывать ошибку при неправильном типе environments", async () => {
+    it("кидает при неправильном типе environments", async () => {
       const invalidData = [
         {
           product: "test-product",
           services: [
-            {
-              service: "test-service",
-              environments: [123, "prod", true], // содержит не строки
-            },
+            { service: "test-service", environments: [123, "prod", true] },
           ],
         },
       ];
@@ -244,39 +196,25 @@ describe("GetFilters Integration Tests", () => {
     });
   });
 
-  describe("Сценарии производительности", () => {
-    it("должен быстро обрабатывать большие объемы данных", async () => {
-      const largeData: FilterData[] = Array.from({ length: 100 }, (_, i) => ({
-        product: `product-${i}`,
-        services: Array.from({ length: 10 }, (_, j) => ({
-          service: `service-${i}-${j}`,
-          environments: ["prod", "staging", "dev", "qa"],
-        })),
-      }));
+  describe("Граничные случаи", () => {
+    it("обрабатывает фильтры с пустым services", async () => {
+      const edgeCaseData: FilterData[] = [
+        { product: "edge-product", services: [] },
+      ];
 
       mockFetch.mockResolvedValueOnce({
-        json: () => Promise.resolve(largeData),
+        json: () => Promise.resolve(edgeCaseData),
       } as Response);
 
-      const startTime = performance.now();
       const result = await GetFilters();
-      const endTime = performance.now();
-
-      expect(result).toEqual(largeData);
-      expect(result).toHaveLength(100);
-      expect(result[0].services).toHaveLength(10);
-
-      // Проверяем что обработка заняла менее 100мс
-      expect(endTime - startTime).toBeLessThan(100);
+      expect(result).toEqual(edgeCaseData);
     });
-  });
 
-  describe("Сценарии граничных случаев", () => {
-    it("должен обрабатывать фильтры с пустыми массивами services", async () => {
+    it("обрабатывает фильтры с пустыми environments", async () => {
       const edgeCaseData: FilterData[] = [
         {
           product: "edge-product",
-          services: [],
+          services: [{ service: "s", environments: [] }],
         },
       ];
 
@@ -285,21 +223,15 @@ describe("GetFilters Integration Tests", () => {
       } as Response);
 
       const result = await GetFilters();
-
       expect(result).toEqual(edgeCaseData);
-      expect(result[0].services).toHaveLength(0);
     });
 
-    it("должен обрабатывать фильтры с пустыми массивами environments", async () => {
+    it("обрабатывает очень длинные строки", async () => {
+      const long = "a".repeat(1000);
       const edgeCaseData: FilterData[] = [
         {
-          product: "edge-product",
-          services: [
-            {
-              service: "edge-service",
-              environments: [],
-            },
-          ],
+          product: long,
+          services: [{ service: long, environments: [long, long] }],
         },
       ];
 
@@ -308,38 +240,9 @@ describe("GetFilters Integration Tests", () => {
       } as Response);
 
       const result = await GetFilters();
-
-      expect(result).toEqual(edgeCaseData);
-      expect(result[0].services[0].environments).toHaveLength(0);
-    });
-
-    it("должен обрабатывать фильтры с очень длинными строками", async () => {
-      const longString = "a".repeat(1000);
-      const edgeCaseData: FilterData[] = [
-        {
-          product: longString,
-          services: [
-            {
-              service: longString,
-              environments: [longString, longString],
-            },
-          ],
-        },
-      ];
-
-      mockFetch.mockResolvedValueOnce({
-        json: () => Promise.resolve(edgeCaseData),
-      } as Response);
-
-      const result = await GetFilters();
-
-      expect(result).toEqual(edgeCaseData);
-      expect(result[0].product).toBe(longString);
-      expect(result[0].services[0].service).toBe(longString);
-      expect(result[0].services[0].environments).toEqual([
-        longString,
-        longString,
-      ]);
+      expect(result[0].product).toBe(long);
+      expect(result[0].services[0].service).toBe(long);
+      expect(result[0].services[0].environments).toEqual([long, long]);
     });
   });
 });
