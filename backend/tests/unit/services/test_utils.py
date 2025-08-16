@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import redis
 
-from services.utils import _r, mask_sensitive, publish_ws_message
+from backend.services.utils import _r, mask_sensitive, publish_ws_message
 
 
 def test_redis_client(mock_settings):

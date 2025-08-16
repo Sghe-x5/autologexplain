@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from db.storage import (
+from backend.db.storage import (
     RedisUnavailableError,
     _now_iso,
     _refresh_ttl,
