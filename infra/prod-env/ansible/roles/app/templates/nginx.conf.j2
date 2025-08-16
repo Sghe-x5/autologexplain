@@ -19,7 +19,7 @@ http {
     listen 80 default_server;
     server_name _;
 
-    # static SPA
+    # static SPA (frontend at /)
     location / {
       proxy_pass http://frontend_upstream;
       proxy_set_header Host $host;
@@ -28,50 +28,41 @@ http {
       proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # backend REST (/logs/*)
-    location /logs {
-      proxy_pass http://backend_upstream;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # backend docs: rewrite /logs/docs* -> /docs*
-    location ^~ /logs/docs {
-      rewrite ^/logs/(.*)$ /$1 break;
-      proxy_pass http://backend_upstream;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # backend redoc: /logs/redoc -> /redoc
-    location = /logs/redoc {
-      rewrite ^/logs/(.*)$ /$1 break;
-      proxy_pass http://backend_upstream;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # backend openapi: /logs/openapi.json -> /openapi.json
-    location = /logs/openapi.json {
-      rewrite ^/logs/(.*)$ /$1 break;
-      proxy_pass http://backend_upstream;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # websocket
-    location /ws {
+    # backend WebSocket at /api/ws -> /ws
+    location ^~ /api/ws {
       proxy_http_version 1.1;
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection "upgrade";
+      rewrite ^/api/(.*)$ /$1 break;
+      proxy_pass http://backend_upstream;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # backend REST: /api/* -> /* (preserve path after /api)
+    location ^~ /api/ {
+      rewrite ^/api/(.*)$ /$1 break;
+      proxy_pass http://backend_upstream;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # handle /api exactly -> backend root
+    location = /api {
+      rewrite ^/api$ / break;
+      proxy_pass http://backend_upstream;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # FastAPI docs request spec at absolute /openapi.json even from /api/docs
+    location = /openapi.json {
       proxy_pass http://backend_upstream;
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;

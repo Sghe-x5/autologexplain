@@ -65,7 +65,11 @@
     chat_ttl_seconds: 1209600
     # Analytics env vars
     openrouter_api_key: "ключ"
-    folder_id: ""
+    folder_id: "{{
+      (lookup('env', 'FOLDER_ID') | default('', true))
+      or (lookup('ini', 'FOLDER_ID file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
     iam_token: "{{
       (lookup('env', 'IAM_TOKEN') | default('', true))
       or (lookup('ini', 'IAM_TOKEN file=' + playbook_dir + '/.env type=properties') | default('', true))
