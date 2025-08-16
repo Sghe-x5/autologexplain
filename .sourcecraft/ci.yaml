@@ -2,21 +2,15 @@ on:
   pull_request:
     - workflows: test-backend-workflow
       filter:
-        paths: ["backend/**", "testing/**"]
-    - workflows: test-analytics-workflow
-      filter:
-        paths: "analytics/**"
+        paths: ["backend/**", "analytics/**", "testing/**"]
     - workflows: test-frontend-workflow
       filter:
         paths: "frontend/**"
+
   push:
     - workflows: ["test-backend-workflow", "build-backend-workflow"]
       filter:
-        paths: ["backend/**", "testing/**"]
-        branches: "main"
-    - workflows: ["test-analytics-workflow", "build-analytics-workflow"]
-      filter:
-        paths: "analytics/**"
+        paths: ["backend/**", "analytics/**", "testing/**"]
         branches: "main"
     - workflows: ["test-frontend-workflow", "build-frontend-workflow"]
       filter:
@@ -32,52 +26,14 @@ workflows:
     tasks:
       - frontend-linters
       - frontend-tests
-  test-analytics-workflow:
-    tasks:
-      - analytics-linters
-      - analytics-tests
   build-backend-workflow:
     tasks:
       - backend-build-push
-  build-analytics-workflow:
-    tasks:
-      - analytics-build-push
   build-frontend-workflow:
     tasks:
       - frontend-build-push
 
 tasks:
-  - name: analytics-build-push
-    env:
-      YC_DOCKER_REGISTRY_URI: cr.yandex/crp9a5kr08o67cpmqtkl
-      IMAGE_NAME: analytics
-      YC_SERVICE_ACCOUNT_ID: ajed0e5oqj975k8up4vp
-      YC_AUTHORIZED_KEY_JSON: ${{ secrets.service_key }}
-      YC_FOLDER_ID: b1g3u90stuffbcgnkgne
-    cubes:
-      - name: install-yc
-        script:
-          - curl -o ./yc-install.sh -L https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
-          - echo 'source /root/yandex-cloud/completion.zsh.inc' >>  ~/.zshrc
-          - chmod +x ./yc-install.sh && ./yc-install.sh -i /tmp/yc -n && mv /tmp/yc/bin/yc /usr/bin/yc
-          - echo "$YC_AUTHORIZED_KEY_JSON" > key.json
-          - yc config profile create sa-profile
-          - yc config set service-account-key key.json
-          - yc config set format json
-          - yc config set folder-id $YC_FOLDER_ID
-      - name: docker-login
-        script:
-          - yc container registry configure-docker --profile sa-profile
-      - name: docker-build-push
-        script:
-          - cd $SOURCECRAFT_WORKSPACE/analytics
-          - docker buildx create --use --name sc-builder || docker buildx use sc-builder
-          - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true --push --progress=plain .
-      - name: docker-logout
-        script:
-          - docker logout $YC_DOCKER_REGISTRY_URI
-
   - name: backend-build-push
     env:
       YC_DOCKER_REGISTRY_URI: cr.yandex/crp9a5kr08o67cpmqtkl
@@ -101,10 +57,16 @@ tasks:
           - yc container registry configure-docker --profile sa-profile
       - name: docker-build-push
         script:
-          - cd $SOURCECRAFT_WORKSPACE/backend
+          - cd $SOURCECRAFT_WORKSPACE
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true --push --progress=plain .
+          - docker buildx build --platform linux/amd64 \
+              -f backend/Dockerfile \
+              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
+              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
+              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
+              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true \
+              --push --progress=plain .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -135,7 +97,12 @@ tasks:
           - cd $SOURCECRAFT_WORKSPACE/frontend
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true --push --progress=plain .
+          - docker buildx build --platform linux/amd64 \
+              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
+              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
+              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
+              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true \
+              --push --progress=plain .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -187,12 +154,9 @@ tasks:
           - cp .env.example .env
           - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
           - pytest --alluredir=allure-results
-          
           - apt-get install -y openjdk-11-jre-headless wget zip
-
           - wget https://github.com/allure-framework/allure2/releases/download/2.34.1/allure-2.34.1.tgz
           - tar -zxvf allure-2.34.1.tgz
-          
           - ./allure-2.34.1/bin/allure generate allure-results --clean -o allure-report
           - zip -r allure-report.zip allure-report
           - zip -r allure-results.zip allure-results
@@ -201,29 +165,6 @@ tasks:
             - testing/api_tests/allure-report.zip
             - testing/api_tests/allure-results.zip
 
-  - name: analytics-linters
-    cubes:
-      - name: analytics-linting
-        image: python:3.11
-        script:
-          - pip install poetry==1.8.3
-          - poetry config virtualenvs.create false
-          - cd analytics
-          - poetry install --no-interaction --no-ansi --no-root
-          - poetry run pip install ruff mypy
-          - poetry run ruff check .
-          - poetry run ruff format --diff .
-          - poetry run mypy .
-  - name: analytics-tests
-    cubes:
-      - name: analytics-tests
-        image: python:3.11
-        script:
-          - pip install poetry==1.8.3
-          - poetry config virtualenvs.create false
-          - cd analytics
-          - poetry install --no-interaction --no-ansi
-          - poetry run pytest
   - name: frontend-linters
     cubes:
       - name: frontend-linting
@@ -232,6 +173,7 @@ tasks:
           - cd frontend
           - yarn install --frozen-lockfile
           - yarn lint
+
   - name: frontend-tests
     cubes:
       - name: frontend-tests
