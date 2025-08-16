@@ -81,6 +81,7 @@ def health():
             host=s.REDIS_HOST,
             port=int(s.REDIS_PORT),
             db=int(s.REDIS_DB),
+            password=s.REDIS_PASSWORD or None,
             socket_timeout=1.0,
             socket_connect_timeout=1.0,
         )
