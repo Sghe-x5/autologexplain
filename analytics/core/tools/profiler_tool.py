@@ -1,11 +1,9 @@
 import json
 
+from analytics.core.db.database import get_clickhouse_client
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from analytics.core.db.database import get_clickhouse_client
-
-# Список колонок, которые безопасно и полезно профилировать.
 ALLOWED_PROFILING_COLUMNS = ["product", "service", "environment", "level", "method", "status_code"]
 
 
@@ -27,7 +25,7 @@ def data_profiler(column_name: str) -> str:
 
     parsed_column_name = column_name.strip()
     if "=" in parsed_column_name:
-        # Если LLM передала "column_name='level'", извлекаем только 'level'
+
         try:
             parsed_column_name = parsed_column_name.split("=", 1)[1].strip(" '\"")
         except IndexError:
@@ -35,13 +33,13 @@ def data_profiler(column_name: str) -> str:
                 f"Ошибка парсинга в 'data-profiler': не удалось извлечь значение из '{column_name}'"
             )
 
-    # Теперь все проверки и запросы используем с очищенным именем
+
     if parsed_column_name not in ALLOWED_PROFILING_COLUMNS:
-        # В сообщении об ошибке покажем и исходный ввод, и что мы из него извлекли, для отладки
+
         return f"Ошибка: Профилирование колонки '{parsed_column_name}' (извлечено из '{column_name}') не разрешено. Доступные колонки: {ALLOWED_PROFILING_COLUMNS}"
 
     client = get_clickhouse_client()
-    # Запрос теперь использует очищенное имя колонки
+
     query = f"SELECT DISTINCT {parsed_column_name} FROM logs LIMIT 100"
 
     try:

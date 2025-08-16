@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from pydantic import AliasChoices, Field, computed_field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
@@ -50,11 +50,6 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
-
-    @computed_field  # type: ignore[misc]
-    @property
-    def CLICKHOUSE_URL(self) -> str:
-        return f"http://{self.CLICKHOUSE_HOST}:{self.CLICKHOUSE_PORT}"
 
     def _finalize(self) -> Settings:
         from urllib.parse import quote_plus
