@@ -153,6 +153,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                         key={p.product}
                         value={p.product}
                         className="cursor-pointer"
+                        data-testid={p.product}
                       >
                         {p.product}
                       </SelectItem>
@@ -195,6 +196,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                         key={s.service}
                         value={s.service}
                         className="cursor-pointer"
+                        data-testid={s.service}
                       >
                         {s.service}
                       </SelectItem>
@@ -235,6 +237,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                       <SelectItem
                         key={env}
                         value={env}
+                        data-testid={env}
                         className="cursor-pointer"
                       >
                         {env}
