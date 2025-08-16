@@ -56,6 +56,13 @@ export type ChatItem =
       pending: boolean;
     };
 
+export type ChatData = {
+  chatId: string;
+  connected: boolean;
+  items: ChatItem[];
+  pending: Record<string, unknown>;
+};
+
 export type ConversationState = {
   chatId: string;
   connected: boolean;

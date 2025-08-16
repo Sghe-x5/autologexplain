@@ -4,13 +4,13 @@ import { Bot } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { useEffect, useMemo, useState } from "react";
+import { WS_BASE } from "../../../lib/consts";
+import type { ChatItem } from "@/lib/chat.schemas";
 import {
+  useChatTurnMutation,
   useNewChatMutation,
   useStreamChatQuery,
-  useChatTurnMutation,
-  type ChatItem,
-} from "../model/WebSocket/chat.api";
-import { WS_BASE } from "../model/WebSocket/consts";
+} from "@/api";
 
 export const ChatWithAI = () => {
   const [messages, setMessages] = useState<ChatItem[]>([]);
