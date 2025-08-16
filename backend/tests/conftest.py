@@ -15,17 +15,20 @@ def mock_settings(monkeypatch):
         port="6379",
         db="0",
         chat_ttl="3600",
+        password="test_password",   # 🔑 новый параметр
     ):
         monkeypatch.setenv("TOKEN_SECRET", secret)
         monkeypatch.setenv("TOKEN_TTL_SECONDS", ttl)
         monkeypatch.setenv("REDIS_HOST", host)
         monkeypatch.setenv("REDIS_PORT", port)
         monkeypatch.setenv("REDIS_DB", db)
+        monkeypatch.setenv("REDIS_PASSWORD", password)   # 🔑 прокидываем пароль
         monkeypatch.setenv("CHAT_TTL_SECONDS", chat_ttl)
 
+        # очищаем кэш, чтобы settings подтянулись заново
         tokens.get_settings.cache_clear()
 
-        return {"secret": secret, "ttl": int(ttl)}
+        return {"secret": secret, "ttl": int(ttl), "password": password}
 
     _mock_settings()
     return _mock_settings
@@ -36,5 +39,4 @@ def mock_ch_client():
     """Мок ClickHouse-клиента"""
     mock = Mock(spec=Client)
     mock.ping.return_value = True
-
     return mock
