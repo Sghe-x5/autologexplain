@@ -26,7 +26,6 @@ def data_profiler(column_name: str) -> str:
 
     parsed_column_name = column_name.strip()
     if "=" in parsed_column_name:
-
         try:
             parsed_column_name = parsed_column_name.split("=", 1)[1].strip(" '\"")
         except IndexError:
@@ -34,9 +33,7 @@ def data_profiler(column_name: str) -> str:
                 f"Ошибка парсинга в 'data-profiler': не удалось извлечь значение из '{column_name}'"
             )
 
-
     if parsed_column_name not in ALLOWED_PROFILING_COLUMNS:
-
         return f"Ошибка: Профилирование колонки '{parsed_column_name}' (извлечено из '{column_name}') не разрешено. Доступные колонки: {ALLOWED_PROFILING_COLUMNS}"
 
     client = get_clickhouse_client()
