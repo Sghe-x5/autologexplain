@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { wsRegistry } from "@/lib/model/wsRegistry";
 import type { ChatData } from "@/lib/chat.schemas";
-import { WS_BASE } from "@/lib/consts";
+import { WS_BASE } from "@/consts/api.const";
 
 function handleChatMessage(msg: any, updateCachedData: any) {
   updateCachedData((draft: ChatData) => {

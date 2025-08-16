@@ -1,4 +1,4 @@
-import { WS_BASE } from "@/lib/consts";
+import { WS_BASE } from "@/consts/api.const";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const wsApi = createApi({

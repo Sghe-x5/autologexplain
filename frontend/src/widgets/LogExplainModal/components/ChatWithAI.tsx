@@ -4,7 +4,7 @@ import { Bot } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { WS_BASE } from "../../../lib/consts";
+import { WS_BASE } from "@/consts/api.const";
 import type { ChatItem } from "@/lib/chat.schemas";
 import {
   useChatTurnMutation,

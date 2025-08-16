@@ -1,4 +1,4 @@
-import { baseUrl } from "@/lib/consts";
+import { baseUrl } from "@/consts/api.const";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 type NewChatResp = { chat_id: string; token: string };
