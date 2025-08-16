@@ -28,6 +28,7 @@ import {
 import { useLogStore } from "../model/store";
 import { getPeriod } from "@/lib/getPeriod";
 import { Sparkles } from "lucide-react";
+import { useAutoAnalysisMutation } from "@/api/chatMessagesApi";
 
 import { type FilterData } from "@/api/getFilters";
 
@@ -63,18 +64,45 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
   });
 
   const setLog = useLogStore((state) => state.setLog);
+  const setAnalysisParams = useLogStore((state) => state.setAnalysisParams);
+  const [autoAnalysis, { isLoading: isAnalysisLoading }] =
+    useAutoAnalysisMutation();
 
   const watchProduct = form.watch("product");
   const watchService = form.watch("service");
   const watchEnvironment = form.watch("environment");
 
-  const onSubmit = (values: LogExplanation) => {
-    mockData.userId = 123;
-    mockData.period = getPeriod({
-      startTime: values.startTime,
-      endTime: values.endTime,
-    });
-    setLog(mockData);
+  const onSubmit = async (values: LogExplanation) => {
+    try {
+      // Устанавливаем данные лога
+      mockData.userId = 123;
+      mockData.period = getPeriod({
+        startTime: values.startTime,
+        endTime: values.endTime,
+      });
+      setLog(mockData);
+
+      // Сохраняем параметры анализа
+      const filters = {
+        start_date: values.startTime.toISOString(),
+        end_date: values.endTime.toISOString(),
+        service: values.service,
+      };
+
+      const prompt = `Проанализируй логи для сервиса ${
+        values.service
+      } в окружении ${
+        values.environment
+      } за период с ${values.startTime.toLocaleString()} по ${values.endTime.toLocaleString()}. Предоставь детальный анализ и рекомендации.`;
+
+      const analysisParams = { filters, prompt };
+      setAnalysisParams(analysisParams);
+
+      // Запускаем автоматический анализ
+      await autoAnalysis();
+    } catch (error) {
+      console.error("Failed to start analysis:", error);
+    }
   };
 
   const interactiveField =
@@ -125,6 +153,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                         key={p.product}
                         value={p.product}
                         className="cursor-pointer"
+                        data-testid={p.product}
                       >
                         {p.product}
                       </SelectItem>
@@ -167,6 +196,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                         key={s.service}
                         value={s.service}
                         className="cursor-pointer"
+                        data-testid={s.service}
                       >
                         {s.service}
                       </SelectItem>
@@ -207,6 +237,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                       <SelectItem
                         key={env}
                         value={env}
+                        data-testid={env}
                         className="cursor-pointer"
                       >
                         {env}
@@ -289,9 +320,10 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         <Button
           type="submit"
           className=" bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
-          disabled={isFormDisabled}
+          disabled={isFormDisabled || isAnalysisLoading}
         >
-          <Sparkles /> Анализировать логи
+          <Sparkles />{" "}
+          {isAnalysisLoading ? "Анализирую..." : "Анализировать логи"}
         </Button>
       </form>
     </Form>
