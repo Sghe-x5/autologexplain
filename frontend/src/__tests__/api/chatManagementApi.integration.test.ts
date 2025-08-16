@@ -1,144 +1,66 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { configureStore } from "@reduxjs/toolkit";
+import { setupListeners } from "@reduxjs/toolkit/query";
 import { chatManagementApi } from "@/api/chatManagementApi";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-describe("chatManagementApi Integration Tests", () => {
+describe("chatManagementApi (integration)", () => {
+  let store: ReturnType<typeof makeStore>;
+
+  function makeStore() {
+    return configureStore({
+      reducer: {
+        [chatManagementApi.reducerPath]: chatManagementApi.reducer,
+      },
+      middleware: (gDM) => gDM().concat(chatManagementApi.middleware),
+    });
+  }
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    global.fetch = vi.fn();
+    store = makeStore();
+    setupListeners(store.dispatch);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("newChat → sends POST /chats/new and returns chat_id + token", async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ chat_id: "c1", token: "t1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    const res = await store
+      .dispatch(chatManagementApi.endpoints.newChat.initiate())
+      .unwrap();
+
+    const [req] = (global.fetch as any).mock.calls[0];
+    expect(req.url).toContain("/chats/new");
+    expect(req.method).toBe("POST");
+
+    expect(res).toEqual({ chat_id: "c1", token: "t1" });
   });
 
-  describe("Структура API", () => {
-    it("должен иметь правильную конфигурацию endpoints", () => {
-      expect(chatManagementApi.endpoints.newChat).toBeDefined();
-      expect(chatManagementApi.endpoints.renewToken).toBeDefined();
+  it("renewToken → sends POST /chats/renew with body { chat_id } and returns token", async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ token: "new-token" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
 
-      expect(chatManagementApi.endpoints.newChat.name).toBe("newChat");
-      expect(chatManagementApi.endpoints.renewToken.name).toBe("renewToken");
-    });
+    const res = await store
+      .dispatch(
+        chatManagementApi.endpoints.renewToken.initiate({ chatId: "abc" })
+      )
+      .unwrap();
 
-    it("должен иметь правильные типы данных", () => {
-      const newChatEndpoint = chatManagementApi.endpoints.newChat;
-      const renewTokenEndpoint = chatManagementApi.endpoints.renewToken;
+    const [req] = (global.fetch as any).mock.calls[0];
+    expect(req.url).toContain("/chats/renew");
+    expect(req.method).toBe("POST");
 
-      expect(newChatEndpoint).toHaveProperty("name");
-      expect(renewTokenEndpoint).toHaveProperty("name");
-    });
-  });
+    const body = await req.clone().text();
+    expect(body).toBe(JSON.stringify({ chat_id: "abc" }));
 
-  describe("Конфигурация endpoints", () => {
-    it("должен иметь правильный reducerPath", () => {
-      expect(chatManagementApi.reducerPath).toBe("chatManagementApi");
-    });
-
-    it("должен иметь правильную структуру", () => {
-      expect(chatManagementApi).toHaveProperty("endpoints");
-    });
-  });
-
-  describe("Валидация структуры newChat endpoint", () => {
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatManagementApi.endpoints.newChat;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильное имя", () => {
-      const endpoint = chatManagementApi.endpoints.newChat;
-      expect(endpoint.name).toBe("newChat");
-    });
-
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatManagementApi.endpoints.newChat;
-      expect(endpoint).toHaveProperty("name");
-    });
-  });
-
-  describe("Валидация структуры renewToken endpoint", () => {
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatManagementApi.endpoints.renewToken;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильное имя", () => {
-      const endpoint = chatManagementApi.endpoints.renewToken;
-      expect(endpoint.name).toBe("renewToken");
-    });
-
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatManagementApi.endpoints.renewToken;
-      expect(endpoint).toHaveProperty("name");
-    });
-  });
-
-  describe("Проверка типов данных", () => {
-    it("должен иметь правильные типы для newChat", () => {
-      const endpoint = chatManagementApi.endpoints.newChat;
-
-      expect(endpoint).toBeDefined();
-      expect(typeof endpoint.name).toBe("string");
-      expect(endpoint.name).toBe("newChat");
-    });
-
-    it("должен иметь правильные типы для renewToken", () => {
-      const endpoint = chatManagementApi.endpoints.renewToken;
-
-      expect(endpoint).toBeDefined();
-      expect(typeof endpoint.name).toBe("string");
-      expect(endpoint.name).toBe("renewToken");
-    });
-  });
-
-  describe("Проверка конфигурации", () => {
-    it("должен использовать правильную конфигурацию", () => {
-      expect(chatManagementApi).toBeDefined();
-      expect(chatManagementApi.reducerPath).toBe("chatManagementApi");
-    });
-
-    it("должен иметь правильную структуру API", () => {
-      expect(chatManagementApi).toHaveProperty("reducerPath");
-      expect(chatManagementApi).toHaveProperty("endpoints");
-    });
-  });
-
-  describe("Проверка экспортируемых хуков", () => {
-    it("должен экспортировать правильные endpoints", () => {
-      expect(chatManagementApi.endpoints.newChat).toBeDefined();
-      expect(chatManagementApi.endpoints.renewToken).toBeDefined();
-    });
-
-    it("должен иметь правильные имена endpoints", () => {
-      expect(chatManagementApi.endpoints.newChat.name).toBe("newChat");
-      expect(chatManagementApi.endpoints.renewToken.name).toBe("renewToken");
-    });
-  });
-
-  describe("Проверка структуры endpoints", () => {
-    it("должен иметь правильную структуру для newChat", () => {
-      const endpoint = chatManagementApi.endpoints.newChat;
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильную структуру для renewToken", () => {
-      const endpoint = chatManagementApi.endpoints.renewToken;
-      expect(endpoint).toHaveProperty("name");
-    });
-  });
-
-  describe("Проверка метаданных", () => {
-    it("должен иметь правильные метаданные для newChat", () => {
-      const endpoint = chatManagementApi.endpoints.newChat;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильные метаданные для renewToken", () => {
-      const endpoint = chatManagementApi.endpoints.renewToken;
-
-      expect(endpoint).toHaveProperty("name");
-    });
+    expect(res).toEqual({ token: "new-token" });
   });
 });
