@@ -9,7 +9,7 @@ export type FilterData = {
   }[];
 };
 
-function validateFilters(data: unknown): asserts data is FilterData[] {
+export function validateFilters(data: unknown): asserts data is FilterData[] {
   if (!Array.isArray(data)) {
     throw new Error("Filters must be an array");
   }
@@ -41,7 +41,12 @@ function validateFilters(data: unknown): asserts data is FilterData[] {
 export const GetFilters = async (): Promise<FilterData[]> => {
   const fetchedData = await fetch(FILTER_URL || "", { method: "GET" })
     .then((res) => res.json())
-    .catch(() => FILTERS_MOCK);
+    .catch(
+      () => FILTERS_MOCK
+      // {
+      //     message: "rejected promise", // Заменить в проде
+      //   }
+    );
 
   validateFilters(fetchedData);
 
