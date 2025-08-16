@@ -5,12 +5,39 @@ import { createPortal } from "react-dom";
 import { useSelector } from "react-redux";
 import { LogExplainBtn } from "@/widgets/LogExplainModal/components/LogExplainBtn";
 import type { RootState } from "@/lib/store";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { type FilterData, GetFilters } from "@/api/getFilters";
+
+const FILTERS_KEY = "logExplainFilters";
 
 function App() {
   const modalRoot = document.getElementById("logExplainModal");
-
   const isShown = useSelector((state: RootState) => state.showModal.isShown);
+
+  const [filters, setFilters] = useState<FilterData[]>([]);
+  const [isFiltersLoaded, setFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(FILTERS_KEY);
+
+    if (saved) {
+      try {
+        setFilters(JSON.parse(saved) as FilterData[]);
+        setFiltersLoaded(true);
+      } catch {
+        console.warn("localStorage filters parse error, fallback to API");
+      }
+    }
+
+    if (!saved) {
+      GetFilters()
+        .then((data) => {
+          setFilters(data);
+          localStorage.setItem(FILTERS_KEY, JSON.stringify(data));
+        })
+        .finally(() => setFiltersLoaded(true));
+    }
+  }, []);
 
   useEffect(() => {
     if (isShown) {
@@ -24,18 +51,23 @@ function App() {
 
   return (
     <main>
-      {isShown &&
-      <div
-          className="fixed inset-0 bg-[#18181B99] backdrop-blur-sm z-40"
-        >
-      </div>
-      }
+      {isShown && (
+        <div className="fixed inset-0 bg-[#18181B99] backdrop-blur-sm z-40"></div>
+      )}
+
       <img src="/images/AppBG.webp" />
+
       {modalRoot !== null &&
         isShown &&
-        createPortal(<LogExplainUI />, modalRoot)}
-      <LogExplainBtn />
+        createPortal(
+          <LogExplainUI
+            filters={filters}
+            isFiltersLoaded={isFiltersLoaded}
+          />,
+          modalRoot
+        )}
 
+      <LogExplainBtn />
     </main>
   );
 }

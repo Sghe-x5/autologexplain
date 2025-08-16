@@ -7,17 +7,15 @@ import { type AppDispatch } from "@/lib/store";
 import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
 import { useLogStore } from "../model/store";
 import Button from "@/components/ui/button/button";
-import { type FilterData, GetFilters } from "@/api/getFilters";
-import { useState, useEffect } from "react";
+import { type FilterData } from "@/api/getFilters";
 
-export const LogExplainUI = () => {
-  const [filters, setFilters] = useState<FilterData[]>([]);
-  const [isFiltersLoaded, setFiltersLoaded] = useState<boolean>(false);
-  useEffect(() => {
-    GetFilters()
-      .then(setFilters)
-      .then(() => setFiltersLoaded(true));
-  }, []);
+export const LogExplainUI = ({
+  filters,
+  isFiltersLoaded,
+}: {
+  filters: FilterData[];
+  isFiltersLoaded: boolean;
+}) => {
 
   const dispatch = useDispatch<AppDispatch>();
   const hasLog = useLogStore((state) => state.log) !== null;

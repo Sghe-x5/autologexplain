@@ -60,6 +60,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
       environment: "",
       startTime: new Date(),
       endTime: new Date(),
+      comment: "", // новое поле (необязательно)
     },
   });
 
@@ -71,10 +72,10 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
   const watchProduct = form.watch("product");
   const watchService = form.watch("service");
   const watchEnvironment = form.watch("environment");
+  const watchComment = form.watch("comment");
 
   const onSubmit = async (values: LogExplanation) => {
     try {
-      // Устанавливаем данные лога
       mockData.userId = 123;
       mockData.period = getPeriod({
         startTime: values.startTime,
@@ -82,23 +83,26 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
       });
       setLog(mockData);
 
-      // Сохраняем параметры анализа
       const filters = {
         start_date: values.startTime.toISOString(),
         end_date: values.endTime.toISOString(),
         service: values.service,
       };
 
+      const userNote =
+        values.comment && values.comment.trim().length > 0
+          ? `Учти: ${values.comment.trim()}`
+          : "";
+
       const prompt = `Проанализируй логи для сервиса ${
         values.service
       } в окружении ${
         values.environment
-      } за период с ${values.startTime.toLocaleString()} по ${values.endTime.toLocaleString()}. Предоставь детальный анализ и рекомендации.`;
+      } за период с ${values.startTime.toLocaleString()} по ${values.endTime.toLocaleString()}. Предоставь детальный анализ и рекомендации. ${userNote}`;
 
       const analysisParams = { filters, prompt };
       setAnalysisParams(analysisParams);
 
-      // Запускаем автоматический анализ
       await autoAnalysis();
     } catch (error) {
       console.error("Failed to start analysis:", error);
@@ -315,11 +319,36 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
           </div>
         </FormItem>
 
+        <FormField
+          control={form.control}
+          name="comment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Задать вопрос или уточнение AI ассистенту</FormLabel>
+              <FormControl>
+                <textarea
+                  {...field}
+                  disabled={!watchProduct}
+                  maxLength={1000}
+                  placeholder="Например: что означает эта ошибка..."
+                  className={`w-full min-h-[200px] p-2 resize-y ${interactiveField} disabled:opacity-50 disabled:cursor-not-allowed`}
+                />
+              </FormControl>
+              <div className="flex justify-end">
+                <p className={`text-xs ${watchComment?.length === 1000 ? "text-[#FF0000]" : "text-[#71717A]"} mt-1`}>
+                  {`${(watchComment?.length ?? 0)}/1000`}
+                </p>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Separator />
 
         <Button
           type="submit"
-          className=" bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
+          className=" bg-[#2463EB] text-[#FAFAFA] hover:bg-[#1C4ED8] hover:border hover:border-[#1C4ED8] cursor-pointer"
           disabled={isFormDisabled || isAnalysisLoading}
         >
           <Sparkles />{" "}

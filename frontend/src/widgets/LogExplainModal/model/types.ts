@@ -8,6 +8,11 @@ export const logFormSchema = z
     // userID: z.string().min(1, "Введите имя пользователя"), // временно отключено
     startTime: z.date(),
     endTime: z.date(),
+    comment: z
+    .string()
+    .max(1000, "Максимум 1000 символов")
+    .optional()
+    .or(z.literal("")),
   })
   .refine((data) => data.startTime <= data.endTime, {
     message: "Время начала должно быть меньше или равно времени окончания",
