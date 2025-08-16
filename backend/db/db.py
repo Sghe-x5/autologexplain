@@ -2,54 +2,52 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
-from functools import lru_cache
+from contextlib import contextmanager
 from typing import Any
 
-from clickhouse_connect import get_client as _get_client
-from clickhouse_connect.driver.client import Client
-from clickhouse_connect.driver.query import QueryResult
+from clickhouse_connect.driver import create_client
+from loguru import logger
 
 from backend.core.config import get_settings
 
 _DEFAULT_CH_SETTINGS: dict[str, Any] = {
     "max_execution_time": 30,
     "output_format_json_quote_64bit_integers": 1,
-    "load_balancing": "random",
+    "wait_end_of_query": 1,
 }
 
 
-@lru_cache
-def client() -> Client:
+@contextmanager
+def _ch_client():
     """
-    Единый инстанс ClickHouse-клиента (thread-safe для чтения).
-    Читает конфиг из ENV через core.config.
+    Создаём новый ClickHouse-клиент на время операции.
     """
     s = get_settings()
-    return _get_client(
+    client = create_client(
+        interface="http",
         host=s.CLICKHOUSE_HOST,
-        port=s.CLICKHOUSE_PORT,
+        port=int(s.CLICKHOUSE_PORT),
         username=s.CLICKHOUSE_USER,
         password=s.CLICKHOUSE_PASSWORD,
         database=s.CLICKHOUSE_DB,
     )
-
-
-def _to_dicts(res: QueryResult) -> list[dict[str, Any]]:
-    names = res.column_names
-    return [dict(zip(names, row, strict=False)) for row in res.result_rows]
+    try:
+        yield client
+    finally:
+        try:
+            client.close()
+        except Exception:
+            logger.debug("ClickHouse client close failed", exc_info=True)
 
 
 def _normalize_json_columns(
     rows: list[dict[str, Any]],
     json_columns: Iterable[str] = ("metadata",),
 ) -> list[dict[str, Any]]:
-    """
-    Преобразует указанные колонки из JSON-строки/bytes в dict.
-    Невалидный JSON -> {}.
-    """
     for row in rows:
         for col in json_columns:
             val = row.get(col)
+            # было: isinstance(val, (str, bytes))
             if isinstance(val, str | bytes):
                 if isinstance(val, bytes):
                     try:
@@ -77,30 +75,29 @@ def query(
     """
     ch_params: dict[str, Any] | None = dict(params) if params is not None else None
     ch_settings = {**_DEFAULT_CH_SETTINGS, **(dict(settings) if settings is not None else {})}
-
-    res = client().query(sql, parameters=ch_params, settings=ch_settings)
-    rows = _to_dicts(res)
+    with _ch_client() as c:
+        res = c.query(sql, parameters=ch_params, settings=ch_settings)
+        rows = list(res.named_results())
     return _normalize_json_columns(rows, json_columns=json_columns)
 
 
 def query_column_names(sql: str, *, params: Mapping[str, Any] | None = None) -> list[str]:
     """Возвращает имена колонок для запроса (без выборки данных)."""
     ch_params: dict[str, Any] | None = dict(params) if params is not None else None
-    column_names = (
-        client().query(sql, parameters=ch_params, settings=_DEFAULT_CH_SETTINGS).column_names
-    )
-    # column_names часто tuple[str, ...] — приводим к списку, чтобы соответствовать аннотации
-    return list(column_names)
+    with _ch_client() as c:
+        res = c.query(sql, parameters=ch_params, settings=_DEFAULT_CH_SETTINGS)
+        return list(res.column_names)
 
 
 def ping() -> bool:
     """Проверка доступности ClickHouse."""
     try:
-        client().ping()
+        with _ch_client() as c:
+            tuple(c.query("SELECT 1").result_rows)
     except Exception:
         return False
     else:
         return True
 
 
-__all__ = ["client", "query", "query_column_names", "ping"]
+__all__ = ["query", "query_column_names", "ping"]
