@@ -1,6 +1,6 @@
 ---
 - name: Restart app stack
-  command: docker compose -f /opt/app/compose.yaml up -d
+  command: docker compose -f /opt/app/compose.yaml up -d --build
   args:
     chdir: /opt/app
   become: true
