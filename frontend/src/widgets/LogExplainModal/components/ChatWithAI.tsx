@@ -3,33 +3,123 @@ import Button from "@/components/ui/button/button";
 import { Bot } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { WS_BASE } from "../../../lib/consts";
 import type { ChatItem } from "@/lib/chat.schemas";
 import {
   useChatTurnMutation,
   useNewChatMutation,
   useStreamChatQuery,
+  useAutoAnalysisMutation,
 } from "@/api";
+import { wsRegistry } from "@/lib/model/wsRegistry";
+import { useLogStore } from "../model/store";
 
-export const ChatWithAI = () => {
+interface ChatWithAIProps {
+  autoAnalysisParams?: {
+    filters: { start_date: string; end_date: string; service: string };
+    prompt: string;
+  };
+}
+
+export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   const [messages, setMessages] = useState<ChatItem[]>([]);
-
   const [input, setInput] = useState("");
-
   const [newChat] = useNewChatMutation();
   const [chatTurn] = useChatTurnMutation();
+  const [autoAnalysis] = useAutoAnalysisMutation();
+  const [isInitializing, setIsInitializing] = useState(false);
+  const clearAnalysisParams = useLogStore((state) => state.clearAnalysisParams);
 
   const [chat, setChat] = useState<{ chatId: string; token: string } | null>(
     null
   );
 
+  const initializationRef = useRef(false);
+
+  // Очистка WebSocket соединений при размонтировании
   useEffect(() => {
-    (async () => {
-      const res = await newChat().unwrap();
-      setChat({ chatId: res.chat_id, token: res.token });
-    })();
-  }, [newChat]);
+    return () => {
+      if (chat) {
+        const ws = wsRegistry.get(chat.chatId);
+        if (ws) {
+          console.log("Cleaning up WebSocket connection on unmount");
+          ws.close();
+          wsRegistry.del(chat.chatId);
+        }
+      }
+    };
+  }, [chat]);
+
+  // Сброс состояния при изменении autoAnalysisParams
+  useEffect(() => {
+    if (autoAnalysisParams === undefined) {
+      setMessages([]);
+      setInput("");
+      initializationRef.current = false;
+      setIsInitializing(false);
+    }
+  }, [autoAnalysisParams]);
+
+  // Автоматический запуск анализа при получении параметров
+  useEffect(() => {
+    // Сбрасываем флаг инициализации при изменении параметров
+    if (autoAnalysisParams !== undefined) {
+      initializationRef.current = false;
+    }
+
+    // Предотвращаем множественные вызовы
+    if (initializationRef.current) return;
+
+    if (autoAnalysisParams && !chat && !isInitializing) {
+      initializationRef.current = true;
+      setIsInitializing(true);
+
+      (async () => {
+        try {
+          console.log("Starting auto analysis...");
+          const result = await autoAnalysis().unwrap();
+          setChat({ chatId: result.chatId, token: result.token });
+
+          // Добавляем системное сообщение о начале анализа
+          setMessages([
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              text: "Начинаю анализ логов...",
+            } as ChatItem,
+          ]);
+        } catch (error) {
+          console.error("Failed to start auto analysis:", error);
+          setMessages([
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              text: "Ошибка при запуске анализа логов. Попробуйте еще раз.",
+            } as ChatItem,
+          ]);
+        } finally {
+          setIsInitializing(false);
+        }
+      })();
+    } else if (!autoAnalysisParams && !chat && !isInitializing) {
+      // Обычное создание чата
+      initializationRef.current = true;
+      setIsInitializing(true);
+
+      (async () => {
+        try {
+          console.log("Creating new chat...");
+          const res = await newChat().unwrap();
+          setChat({ chatId: res.chat_id, token: res.token });
+        } catch (error) {
+          console.error("Failed to create chat:", error);
+        } finally {
+          setIsInitializing(false);
+        }
+      })();
+    }
+  }, [autoAnalysisParams, chat, autoAnalysis, newChat, isInitializing]);
 
   const streamParams = useMemo(
     () =>
@@ -38,6 +128,30 @@ export const ChatWithAI = () => {
   );
 
   const { data } = useStreamChatQuery(streamParams!, { skip: !chat });
+
+  // Отправляем запрос на анализ после установки WebSocket соединения
+  useEffect(() => {
+    if (chat && autoAnalysisParams && data?.connected) {
+      console.log("WebSocket connected, sending analysis request...");
+
+      const ws = wsRegistry.get(chat.chatId);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = {
+          type: "analysis_start",
+          request_id: crypto.randomUUID(),
+          filters: autoAnalysisParams.filters,
+          prompt: autoAnalysisParams.prompt,
+        };
+
+        console.log("Sending analysis request:", message);
+        ws.send(JSON.stringify(message));
+
+        // Очищаем параметры анализа после отправки
+        // Это предотвратит повторную отправку
+        clearAnalysisParams();
+      }
+    }
+  }, [chat, autoAnalysisParams, data?.connected]);
 
   useEffect(() => {
     if (data?.items?.length) {

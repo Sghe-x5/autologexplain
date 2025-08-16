@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { wsRegistry } from "@/lib/model/wsRegistry";
-import { WS_BASE } from "@/lib/consts";
+import { WS_BASE, baseUrl } from "@/lib/consts";
 
 function sendWebSocketMessage(chatId: string, message: any) {
   const ws = wsRegistry.get(chatId);
@@ -44,6 +44,45 @@ export const chatMessagesApi = createApi({
       },
     }),
 
+    autoAnalysis: build.mutation<
+      { chatId: string; token: string; request_id: string },
+      void
+    >({
+      async queryFn() {
+        console.log("Creating new chat...");
+        const newChatResponse = await fetch(`${baseUrl}/chats/new`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!newChatResponse.ok) {
+          const errorText = await newChatResponse.text();
+          console.error(
+            "Failed to create chat:",
+            newChatResponse.status,
+            errorText
+          );
+          throw new Error(
+            `Failed to create chat: ${newChatResponse.status} ${errorText}`
+          );
+        }
+
+        const { chat_id, token } = await newChatResponse.json();
+        console.log("Chat created successfully:", { chat_id, token });
+
+        // Возвращаем параметры чата, WebSocket соединение будет установлено в ChatWithAI
+        return {
+          data: {
+            chatId: chat_id,
+            token,
+            request_id: crypto.randomUUID(),
+          },
+        };
+      },
+    }),
+
     chatTurn: build.mutation<
       { enqueued: true; request_id: string },
       { chatId: string; content: string }
@@ -59,5 +98,8 @@ export const chatMessagesApi = createApi({
   }),
 });
 
-export const { useAnalysisStartMutation, useChatTurnMutation } =
-  chatMessagesApi;
+export const {
+  useAnalysisStartMutation,
+  useChatTurnMutation,
+  useAutoAnalysisMutation,
+} = chatMessagesApi;
