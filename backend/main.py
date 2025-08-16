@@ -5,10 +5,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.chats import router as chats_router
-from api.logs import router as logs_router
-from api.ws import router as ws_router
-from db.storage import init_store
+from backend.api.chats import router as chats_router
+from backend.api.logs import router as logs_router
+from backend.api.ws import router as ws_router
+from backend.db.storage import init_store
 
 
 @asynccontextmanager

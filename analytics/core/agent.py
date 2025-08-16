@@ -4,10 +4,10 @@ from langchain.prompts import BasePromptTemplate, PromptTemplate
 from langchain.tools.render import render_text_description
 from langchain_community.chat_models.yandex import ChatYandexGPT
 
-from core.tools.profiler_tool import data_profiler
-from core.tools.specialized_tools import python_code_interpreter, trace_retriever
-from core.tools.sql_query_tool import safe_sql_query_executor
-from utils.config import LLM_MODEL_NAME, SYSTEM_PROMT, YC_API_KEY, YC_FOLDER_ID, YC_IAM_TOKEN
+from analytics.core.tools.profiler_tool import data_profiler
+from analytics.core.tools.specialized_tools import python_code_interpreter, trace_retriever
+from analytics.core.tools.sql_query_tool import safe_sql_query_executor
+from analytics.utils.config import LLM_MODEL_NAME, SYSTEM_PROMT, YC_API_KEY, YC_FOLDER_ID, YC_IAM_TOKEN
 
 
 def create_log_agent() -> AgentExecutor:

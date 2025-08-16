@@ -1,25 +1,25 @@
 from __future__ import annotations
 
-import random
-import time
+from functools import lru_cache
+from typing import Any
 
-_STUB_REPLIES = [
-    "Похоже, всё норм. Если что — уточни интервал.",
-    "Вижу пару аномалий, но нужно больше данных.",
-    "Ошибка на стороне клиента не подтверждается.",
-    "Есть всплеск WARN — возможно деградация внешнего сервиса.",
-    "Метрик мало — проверь фильтры.",
-]
+from analytics.core.agent import create_log_agent
 
 
-def ask_llm(prompt: str, context: str | None = None) -> str:
-    """Заглушка LLM: подождать 3 секунды и вернуть случайную фразу."""
-    time.sleep(3)
-    base = random.choice(_STUB_REPLIES)
-    prompt = (prompt or "").strip()
-    return f"{base}\n\nЗапрос: {prompt}" if prompt else base
+@lru_cache(maxsize=256)
+def _get_agent(chat_id: str):
+    """
+    Возвращает из кэша (или создаёт) агента для конкретного chat_id.
+    У каждого чата — свой инстанс агента с собственной памятью.
+    """
+    return create_log_agent()
 
 
-def build_context(aggregates: dict | None = None, samples: list[dict] | None = None) -> str:
-    """Заглушка контекста — для совместимости вызовов."""
-    return "контекст отключён (заглушка)"
+def ask_llm(prompt: str, chat_id: str) -> str:
+    """
+    Унифицированная точка входа для вызова ИИ.
+    Контекст игнорируем (по вашему требованию), передаём только prompt.
+    """
+    agent = _get_agent(chat_id)
+    result: dict[str, Any] = agent.invoke({"input": prompt})
+    return str(result.get("output", ""))

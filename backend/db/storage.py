@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import redis
 
-from core.config import get_settings
+from backend.core.config import get_settings
 
 
 class RedisUnavailableError(RuntimeError):
