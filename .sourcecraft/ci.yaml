@@ -60,13 +60,7 @@ tasks:
           - cd $SOURCECRAFT_WORKSPACE
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 \
-              -f backend/Dockerfile \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
-              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
-              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true \
-              --push --progress=plain .
+          - docker buildx build --platform linux/amd64 -f backend/Dockerfile --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true --push --progress=plain .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -97,12 +91,7 @@ tasks:
           - cd $SOURCECRAFT_WORKSPACE/frontend
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
-              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
-              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true \
-              --push --progress=plain .
+          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max,oci-mediatypes=true --push --progress=plain .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
