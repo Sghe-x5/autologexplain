@@ -1,8 +1,6 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from backend.services.utils import _r, mask_sensitive, publish_ws_message
 
 

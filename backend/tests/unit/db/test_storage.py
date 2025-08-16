@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
 import pytest
-
 from backend.db.storage import (
     RedisUnavailableError,
     _now_iso,
