@@ -12,9 +12,10 @@ export const LogExplainBtn = () => {
         <Button
           data-test-id="open-modal-button"
           onClick={() => dispatch(open())}
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 z-40 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-2 border-white/20 hover:scale-110 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 z-40 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-2 border-white/20 hover:scale-110 cursor-pointer"
         >
           <svg
+            data-test-id="open-modal-icon"
             xmlns="http://www.w3.org/2000/svg"
             width="24"
             height="24"
@@ -33,7 +34,9 @@ export const LogExplainBtn = () => {
             <path d="M15 13v2"></path>
             <path d="M9 13v2"></path>
           </svg>
-          <span className="sr-only">Открыть ИИ Ассистента</span>
+          <span data-test-id="open-modal-label" className="sr-only">
+            Открыть ИИ Ассистента
+          </span>
         </Button>
       )}
     </>

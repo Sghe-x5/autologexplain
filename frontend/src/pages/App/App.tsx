@@ -50,12 +50,15 @@ function App() {
   }, [isShown, modalRoot?.classList]);
 
   return (
-    <main>
+    <main data-test-id="app-root">
       {isShown && (
-        <div className="fixed inset-0 bg-[#18181B99] backdrop-blur-sm z-40"></div>
+        <div
+          className="fixed inset-0 bg-[#18181B99] backdrop-blur-sm z-40"
+          data-test-id="modal-backdrop"
+        ></div>
       )}
 
-      <img src="/images/AppBG.webp" />
+      <img src="/images/AppBG.webp" data-test-id="app-background" />
 
       {modalRoot !== null &&
         isShown &&
@@ -63,11 +66,12 @@ function App() {
           <LogExplainUI
             filters={filters}
             isFiltersLoaded={isFiltersLoaded}
+            data-test-id="log-explain-ui"
           />,
           modalRoot
         )}
 
-      <LogExplainBtn />
+      <LogExplainBtn data-test-id="log-explain-button" />
     </main>
   );
 }

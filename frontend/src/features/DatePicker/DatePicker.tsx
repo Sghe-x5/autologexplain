@@ -81,13 +81,13 @@ export default function DatePicker({
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" data-test-id="date-picker">
       {label && (
-        <Label htmlFor="date" className="px-1">
+        <Label htmlFor="date" className="px-1" data-test-id="date-picker-label">
           {label}
         </Label>
       )}
-      <div className="relative flex gap-2">
+      <div className="relative flex gap-2" data-test-id="date-picker-wrapper">
         <Input
           data-test-id="date-input"
           id="date"
@@ -97,10 +97,10 @@ export default function DatePicker({
           readOnly
         />
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
+          <PopoverTrigger asChild data-test-id="open-calendar-trigger">
             <Button
-              data-test-id="reveal-date-inputs-button"
-              id="date-picker"
+              data-test-id="open-calendar-button"
+              id="date-picker-button"
               variant="ghost"
               className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
             >
@@ -113,8 +113,12 @@ export default function DatePicker({
             align="end"
             alignOffset={-8}
             sideOffset={10}
+            data-test-id="calendar-popover"
           >
-            <div className="w-full h-[370px] flex flex-col justify-between border-r">
+            <div
+              className="w-full h-[370px] flex flex-col justify-between border-r"
+              data-test-id="calendar-wrapper"
+            >
               <Calendar
                 mode="single"
                 selected={internalDate}
@@ -124,8 +128,12 @@ export default function DatePicker({
                 onSelect={handleDateChange}
                 weekStartsOn={1}
                 locale={ru}
+                data-test-id="calendar"
               />
-              <div className="flex justify-between px-4 py-1">
+              <div
+                className="flex justify-between px-4 py-1"
+                data-test-id="calendar-footer"
+              >
                 <Button
                   data-test-id="clear-date-button"
                   variant="ghost"
@@ -146,8 +154,12 @@ export default function DatePicker({
                 </Button>
               </div>
             </div>
-            <div className="pb-[10px]">
-              <TimePicker value={time} onChange={handleTimeChange} />
+            <div className="pb-[10px]" data-test-id="time-picker-wrapper">
+              <TimePicker
+                value={time}
+                onChange={handleTimeChange}
+                data-test-id="time-picker"
+              />
             </div>
           </PopoverContent>
         </Popover>
