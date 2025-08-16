@@ -9,7 +9,7 @@ from clickhouse_connect import get_client as _get_client
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.query import QueryResult
 
-from core.config import get_settings
+from backend.core.config import get_settings
 
 _DEFAULT_CH_SETTINGS: dict[str, Any] = {
     "max_execution_time": 30,

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from celery import Celery  # type: ignore[import-untyped]
 from loguru import logger
 
-from core.config import get_settings
-from db.storage import add_message
-from services.llm_service import ask_llm, build_context
-from services.utils import publish_ws_message
+from backend.core.config import get_settings
+from backend.db.storage import add_message
+from backend.services.llm_service import ask_llm
+from backend.services.utils import publish_ws_message
 
 s = get_settings()
 celery_app = Celery("tasks", broker=s.CELERY_BROKER_URL, backend=s.CELERY_BACKEND_URL)
@@ -31,11 +32,35 @@ celery_app.conf.update(
 )
 
 
+class EmptyChatTurnError(ValueError):
+    """Raised when chat_turn content is empty."""
+
+    def __init__(self) -> None:
+        super().__init__("Empty content for chat_turn")
+
+
 def _finalize(chat_id: str, request_id: str, content: str) -> None:
-    mid = add_message(chat_id, "assistant", content, {})
+    """
+    Сохраняет ответ ассистента и публикует событие в канал WS.
+    """
+    message_id = add_message(chat_id, "assistant", content, {})
     publish_ws_message(
-        chat_id, {"type": "final", "request_id": request_id, "message_id": mid, "content": content}
+        chat_id,
+        {
+            "type": "final",
+            "request_id": request_id,
+            "message_id": message_id,
+            "content": content,
+        },
     )
+
+
+def _validate_chat_turn_message(user_message: str) -> None:
+    """
+    Проверяет, что сообщение пользователя не пустое.
+    """
+    if not user_message:
+        raise EmptyChatTurnError()
 
 
 @celery_app.task(
@@ -44,20 +69,41 @@ def _finalize(chat_id: str, request_id: str, content: str) -> None:
 def run_analysis_pubsub(
     self, request_id: str, chat_id: str, filters: dict[str, Any], prompt: str | None = None
 ) -> None:
-    """WS → Redis(broker) → Celery → тут заглушка LLM → Redis(pubsub) → WS."""
+    """
+    Обработка сообщения типа `analysis_start`: передаём prompt + filters в ИИ (через analytics)
+    и возвращаем ответ в WebSocket как `final`.
+    """
     try:
         logger.info(
-            "[stub analysis] chat_id={} req={} filters_keys={}",
+            "[analysis] chat_id={} req={} filters_keys={} prompt_present={}",
             chat_id,
             request_id,
             list((filters or {}).keys()),
+            bool(prompt and str(prompt).strip()),
         )
-        # контекст для совместимости (пока не используется)
-        context = build_context({}, [])
-        answer = ask_llm(prompt or "Объясни простыми словами", context)
+
+        # 1) Базовый запрос
+        user_prompt = (prompt or "Объясни последние логи").strip()
+
+        # 2) Прикладываем filters (как есть) для ИИ — в текстовом виде
+        if filters:
+            try:
+                filters_repr = json.dumps(filters, ensure_ascii=False, indent=2)
+            except TypeError:
+                filters_repr = repr(filters)
+            user_prompt = f"{user_prompt}\n\nФильтры:\n{filters_repr}"
+
+        try:
+            add_message(chat_id, "user", user_prompt, {"filters": filters})
+        except Exception:
+            logger.exception("failed to add user message to chat history (analysis)")
+
+        answer = ask_llm(user_prompt, chat_id=chat_id)
+
         _finalize(chat_id, request_id, answer)
+
     except Exception as e:
-        logger.exception("run_analysis_pubsub stub failed")
+        logger.exception("run_analysis_pubsub failed")
         publish_ws_message(
             chat_id,
             {
@@ -74,13 +120,30 @@ def run_analysis_pubsub(
     bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3}
 )
 def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str) -> None:
-    """Обычный чат-ход: та же заглушка LLM."""
+    """
+    Обычный ход диалога (`chat_turn`): передаём только текст пользователя в ИИ.
+    """
     try:
-        logger.info("[stub chat_turn] chat_id={} req={}", chat_id, request_id)
-        answer = ask_llm(content or "Сообщение", context="чат")
+        user_message = (content or "").strip()
+        logger.info(
+            "[chat_turn] chat_id={} req={} content_present={}",
+            chat_id,
+            request_id,
+            bool(user_message),
+        )
+
+        _validate_chat_turn_message(user_message)
+
+        try:
+            add_message(chat_id, "user", user_message, {})
+        except Exception:
+            logger.exception("failed to add user message to chat history (chat_turn)")
+
+        answer = ask_llm(user_message, chat_id=chat_id)
         _finalize(chat_id, request_id, answer)
+
     except Exception as e:
-        logger.exception("chat_turn_pubsub stub failed")
+        logger.exception("chat_turn_pubsub failed")
         publish_ws_message(
             chat_id,
             {

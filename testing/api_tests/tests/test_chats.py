@@ -1,5 +1,6 @@
 import allure
 
+
 @allure.feature("Chats")
 @allure.story("/new endpoint")
 def test_create_chat_anonymous(client):
@@ -11,6 +12,7 @@ def test_create_chat_anonymous(client):
         data = resp.json()
         assert "chat_id" in data
         assert "token" in data
+
 
 @allure.feature("Chats")
 @allure.story("/renew endpoint")
@@ -27,6 +29,7 @@ def test_renew_chat_token_success(client):
         data = resp.json()
         assert "token" in data
         assert data["chat_id"] == chat_id
+
 
 @allure.feature("Chats")
 @allure.story("/renew endpoint")

@@ -1,5 +1,5 @@
-
 import allure
+
 
 @allure.feature("Logs Service")
 @allure.story("/tree endpoint")
@@ -15,6 +15,7 @@ def test_get_products_services_tree(client, mock_logs_services_tree):
         assert isinstance(data, list)
         assert "product" in data[0]
         assert "services" in data[0]
+
 
 @allure.feature("Logs Service")
 @allure.story("/health endpoint")

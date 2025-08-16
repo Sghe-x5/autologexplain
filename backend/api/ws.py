@@ -10,9 +10,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
 from redis.asyncio import Redis
 
-from celery_worker import chat_turn_pubsub, run_analysis_pubsub
-from core.config import get_settings
-from services.tokens import verify_chat_token
+from backend.celery_worker import chat_turn_pubsub, run_analysis_pubsub
+from backend.core.config import get_settings
+from backend.services.tokens import verify_chat_token
 
 router = APIRouter()
 _MAX_WS_MESSAGE_BYTES = 64 * 1024  # 64 KiB
@@ -35,7 +35,7 @@ def _r() -> Redis:
         host=s.REDIS_HOST,
         port=int(s.REDIS_PORT),
         db=int(s.REDIS_DB),
-    password=(s.REDIS_PASSWORD or None),
+        password=(s.REDIS_PASSWORD or None),
         decode_responses=True,
         health_check_interval=30,
         socket_timeout=3.0,

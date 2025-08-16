@@ -1,13 +1,13 @@
 import os
 import pytest
 import requests
-import asyncio
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
+
 
 @pytest.fixture
 def client():
@@ -17,17 +17,23 @@ def client():
 
         def post(self, path, **kwargs):
             return requests.post(f"{BASE_URL}{path}", **kwargs)
+
     return APIClient()
+
 
 @pytest.fixture
 def mock_logs_services_tree():
     tree = [
-        {"product": "prodA", "services": [{"service": "svc1", "environments": ["prod","qa"]}]}
+        {
+            "product": "prodA",
+            "services": [{"service": "svc1", "environments": ["prod", "qa"]}],
+        }
     ]
     with patch("requests.get") as m:
         m.return_value.status_code = 200
         m.return_value.json.return_value = tree
         yield m
+
 
 @pytest.fixture
 def mock_health_response():
@@ -36,4 +42,3 @@ def mock_health_response():
         m.return_value.status_code = 200
         m.return_value.json.return_value = health
         yield m
-

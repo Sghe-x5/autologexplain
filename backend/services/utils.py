@@ -6,7 +6,7 @@ from typing import Any
 
 import redis
 
-from core.config import get_settings
+from backend.core.config import get_settings
 
 
 @lru_cache

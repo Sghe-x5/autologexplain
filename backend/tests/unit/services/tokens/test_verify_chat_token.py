@@ -3,7 +3,7 @@ import json
 import time
 from hashlib import sha256
 
-from services.tokens import _b64, _secret, issue_chat_token, verify_chat_token
+from backend.services.tokens import _b64, _secret, issue_chat_token, verify_chat_token
 
 
 def test_verify_valid_token(mock_settings):

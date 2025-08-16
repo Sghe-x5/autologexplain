@@ -1,13 +1,15 @@
 [tool.poetry]
 name = "autolog"
 version = "0.1.0"
-description = "FastAPI + Celery + Redis + ClickHouse (без Postgres)"
+description = "FastAPI + Celery + Redis + ClickHouse + Analytics CLI/agent"
 authors = ["You <you@example.com>"]
 readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
+
+# --- backend ---
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "^0.35.0"}
 celery = "*"
@@ -19,6 +21,16 @@ python-dotenv = "*"
 pydantic-settings = "^2.10.1"
 clickhouse-connect = "^0.8.18"
 pydantic = "^2.11.7"
+
+# --- analytics ---
+langchain = "^0.3.0"
+langchain-community = "^0.3.0"
+langchain-openai = "^0.2.0"
+langchain-experimental = "^0.3.0"
+pandas = "^2.2.0"
+lark = "^1.1.9"
+grpcio = "^1.62"
+yandexcloud = "^0.250.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
@@ -37,15 +49,29 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E","F","I","UP","B","SIM","ASYNC","TRY"]
-ignore = ["E501"]
+select = ["E","F","I","UP","B","SIM","ASYNC","TRY","N"]
+ignore = ["E203", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"core/agent.py" = ["E501"]
+"core/tools/*.py" = ["E501"]
+"main.py" = ["E501"]
 
 [tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
 plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [
+  # backend
   "redis",
   "redis.*",
   "fastapi",
@@ -53,14 +79,20 @@ module = [
   "loguru",
   "celery",
   "celery.*",
+  # analytics
+  "langchain",
+  "langchain.*",
+  "clickhouse_connect",
+  "pandas",
+  "dotenv",
 ]
 ignore_missing_imports = true
-
-[build-system]
-requires = ["poetry-core>=1.9.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 pythonpath = [
   "."
 ]
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
