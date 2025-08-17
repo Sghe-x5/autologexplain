@@ -91,6 +91,22 @@
       or (lookup('ini', 'DOCKER_REGISTRY_PASSWORD file=' + playbook_dir + '/.env type=properties') | default('', true))
       or ''
     }}"
+    yc_key_id: "{{
+      (lookup('env', 'YC_KEY_ID') | default('', true))
+      or (lookup('ini', 'YC_KEY_ID file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+    yc_service_account_id: "{{
+      (lookup('env', 'YC_SERVICE_ACCOUNT_ID') | default('', true))
+      or (lookup('ini', 'YC_SERVICE_ACCOUNT_ID file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+    yc_private_key: >-
+      {{
+        (lookup('env', 'YC_PRIVATE_KEY') | default('', true))
+        or (lookup('ini', 'YC_PRIVATE_KEY file=' + playbook_dir + '/.env type=properties') | default('', true))
+        or (lookup('file', yc_private_key_file))
+      }}
   tasks:
     - name: Include app role
       include_role:
