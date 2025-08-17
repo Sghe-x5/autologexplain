@@ -93,7 +93,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
           ]);
 
           setIsAssistantTyping(true);
-        } catch (error) {
+        } catch {
           setMessages([
             {
               id: crypto.randomUUID(),
@@ -145,7 +145,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
         clearAnalysisParams();
       }
     }
-  }, [chat, autoAnalysisParams, data?.connected]);
+  }, [chat, autoAnalysisParams, data?.connected, clearAnalysisParams]);
 
   useEffect(() => {
     if (data?.items?.length) {
