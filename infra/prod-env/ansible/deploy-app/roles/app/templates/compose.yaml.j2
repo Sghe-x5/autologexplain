@@ -16,6 +16,18 @@ services:
     env_file:
       - /opt/app/backend.env
   
+  worker:
+    image: "{{ backend_image }}"
+    restart: unless-stopped
+    command: >-
+      celery -A backend.celery_worker.celery_app worker -l info --concurrency=2 -E
+    environment:
+      - PYTHONPATH=/app:/app/backend
+    env_file:
+      - /opt/app/backend.env
+    depends_on:
+      - backend
+  
   # --- Monitoring exporters (scraped by Prometheus on Bastion) ---
   node-exporter:
     image: prom/node-exporter:latest
