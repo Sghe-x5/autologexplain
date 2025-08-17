@@ -36,7 +36,9 @@ function App() {
         })
         .catch((err) => console.error(err))
         .finally(() => setFiltersLoaded(true));
-    } catch {}
+    } catch {
+      console.error("failed to fetch filters");
+    }
   }, []);
 
   useEffect(() => {
@@ -58,7 +60,9 @@ function App() {
         ></div>
       )}
 
-      <img src="/images/AppBG.webp" data-test-id="app-background" />
+      <div className="w-full max-w-screen h-full max-h-screen overflow-hidden">
+        <img src="/images/AppBG.webp" data-test-id="app-background" />
+      </div>
 
       {modalRoot !== null &&
         isShown &&
