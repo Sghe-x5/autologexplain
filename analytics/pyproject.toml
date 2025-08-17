@@ -17,6 +17,8 @@ pydantic = "^2.7.4"
 python-dotenv = "^1.0.1"
 pandas = "^2.2.0"
 lark = "^1.1.9"
+pyjwt = "^2.10.1"
+yandexcloud = "^0.355.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

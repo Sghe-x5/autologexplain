@@ -2,14 +2,16 @@ import os
 
 from dotenv import load_dotenv
 
+from utils.token_manager import YandexCloudTokenManager
+
 load_dotenv()
 
 YC_FOLDER_ID = os.getenv("YC_FOLDER_ID")
-YC_IAM_TOKEN = os.getenv("YC_IAM_TOKEN")
 YC_API_KEY = os.getenv("YC_API_KEY")
+token_manager = YandexCloudTokenManager()
 
-if not YC_IAM_TOKEN and not YC_API_KEY:
-    raise ValueError("Не найдены ни YC_IAM_TOKEN, ни YC_API_KEY в файле .env")
+if not YC_API_KEY:
+    raise ValueError("Не найден YC_API_KEY в файле .env")
 
 if not YC_FOLDER_ID:
     raise ValueError("Не найден YC_FOLDER_ID в файле .env")
