@@ -222,19 +222,22 @@
     mode: '0644'
   notify: Restart app stack
 
-- name: Render analytics.env
+- name: Render docker compose
   template:
-    src: analytics.env.j2
-    dest: /opt/app/analytics.env
+    src: compose.yaml.j2
+    dest: /opt/app/compose.yaml
     owner: ubuntu
     group: ubuntu
     mode: '0644'
   notify: Restart app stack
 
-- name: Render docker compose
+# Promtail config for log shipping to Bastion Loki
+- name: Render promtail config for app node
+  vars:
+    loki_url: "http://{{ hostvars[groups['bastion'][0]].ansible_host | default('bastion') }}:3100"
   template:
-    src: compose.yaml.j2
-    dest: /opt/app/compose.yaml
+    src: "{{ playbook_dir }}/../deploy-monitoring/templates/promtail-config.yml.j2"
+    dest: "/opt/app/promtail-config.yml"
     owner: ubuntu
     group: ubuntu
     mode: '0644'
