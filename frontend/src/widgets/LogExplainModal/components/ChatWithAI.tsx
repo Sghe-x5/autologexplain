@@ -22,6 +22,14 @@ interface ChatWithAIProps {
   };
 }
 
+const TypingIndicator = () => (
+  <div className="flex gap-1 items-center text-gray-500 px-3 py-2">
+    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+  </div>
+);
+
 export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [input, setInput] = useState("");
@@ -35,15 +43,15 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
     null
   );
 
+  const [isAssistantTyping, setIsAssistantTyping] = useState(false);
+
   const initializationRef = useRef(false);
 
-  // Очистка WebSocket соединений при размонтировании
   useEffect(() => {
     return () => {
       if (chat) {
         const ws = wsRegistry.get(chat.chatId);
         if (ws) {
-          console.log("Cleaning up WebSocket connection on unmount");
           ws.close();
           wsRegistry.del(chat.chatId);
         }
@@ -51,7 +59,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
     };
   }, [chat]);
 
-  // Сброс состояния при изменении autoAnalysisParams
   useEffect(() => {
     if (autoAnalysisParams === undefined) {
       setMessages([]);
@@ -61,7 +68,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
     }
   }, [autoAnalysisParams]);
 
-  // Автоматический запуск анализа при получении параметров
   useEffect(() => {
     if (autoAnalysisParams !== undefined) {
       initializationRef.current = false;
@@ -75,7 +81,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
 
       (async () => {
         try {
-          console.log("Starting auto analysis...");
           const result = await autoAnalysis().unwrap();
           setChat({ chatId: result.chatId, token: result.token });
 
@@ -86,8 +91,9 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
               text: "Начинаю анализ логов...",
             } as ChatItem,
           ]);
-        } catch (error) {
-          console.error("Failed to start auto analysis:", error);
+
+          setIsAssistantTyping(true);
+        } catch {
           setMessages([
             {
               id: crypto.randomUUID(),
@@ -105,7 +111,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
 
       (async () => {
         try {
-          console.log("Creating new chat...");
           const res = await newChat().unwrap();
           setChat({ chatId: res.chat_id, token: res.token });
         } catch (error) {
@@ -127,8 +132,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
 
   useEffect(() => {
     if (chat && autoAnalysisParams && data?.connected) {
-      console.log("WebSocket connected, sending analysis request...");
-
       const ws = wsRegistry.get(chat.chatId);
       if (ws && ws.readyState === WebSocket.OPEN) {
         const message = {
@@ -137,14 +140,12 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
           filters: autoAnalysisParams.filters,
           prompt: autoAnalysisParams.prompt,
         };
-
-        console.log("Sending analysis request:", message);
         ws.send(JSON.stringify(message));
-
+        setIsAssistantTyping(true);
         clearAnalysisParams();
       }
     }
-  }, [chat, autoAnalysisParams, data?.connected]);
+  }, [chat, autoAnalysisParams, data?.connected, clearAnalysisParams]);
 
   useEffect(() => {
     if (data?.items?.length) {
@@ -160,22 +161,33 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
               .replace(/Запрос: .*/, ""),
           }));
 
-        return [...prev, ...newMessages];
+        if (newMessages.some((m) => m.role === "assistant")) {
+          setIsAssistantTyping(false);
+        }
+
+        return newMessages.length ? [...prev, ...newMessages] : prev;
       });
     }
   }, [data]);
 
   const sendMessage = async () => {
     if (!chat || !input.trim()) return;
-    await chatTurn({
-      chatId: chat.chatId,
-      content: input.trim(),
-    });
+
+    const text = input.trim();
     setInput("");
-    setMessages([
-      ...messages,
-      { id: crypto.randomUUID(), role: "user", text: input.trim() } as ChatItem,
+
+    setMessages((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "user", text } as ChatItem,
     ]);
+
+    setIsAssistantTyping(true);
+
+    try {
+      await chatTurn({ chatId: chat.chatId, content: text });
+    } catch {
+      setIsAssistantTyping(false);
+    }
   };
 
   return (
@@ -193,20 +205,21 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
           className="h-full px-2 py-2"
           data-test-id="chat-messages-scroll"
         >
-          {messages.length > 0 &&
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
-                  msg.role === "user"
-                    ? "bg-[#F8FAFC] ml-auto text-black w-fit"
-                    : "bg-none text-gray-900"
-                }`}
-                data-test-id={`chat-message-${msg.role}`}
-              >
-                {msg.text}
-              </div>
-            ))}
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "bg-[#F8FAFC] ml-auto text-black w-fit"
+                  : "bg-none text-gray-900"
+              }`}
+              data-test-id={`chat-message-${msg.role}`}
+            >
+              {msg.text}
+            </div>
+          ))}
+
+          {isAssistantTyping && <TypingIndicator />}
         </ScrollArea>
       </div>
 
