@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from utils.token_manager import YandexCloudTokenManager
+from analytics.utils.token_manager import YandexCloudTokenManager
 
 load_dotenv()
 
