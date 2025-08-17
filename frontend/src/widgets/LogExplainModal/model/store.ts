@@ -29,3 +29,7 @@ export const useLogStore = create<LogStore>((set) => ({
     set({ log: null, analysisParams: null });
   },
 }));
+
+// Расскажи почему сервер упал. Как это можно пофиксить?
+// Предложи варианты как пофиксить логирование
+// Дай конкретный пример
