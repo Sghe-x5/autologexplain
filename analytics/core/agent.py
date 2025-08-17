@@ -55,7 +55,7 @@ def create_log_agent() -> AgentExecutor:
 
     agent = create_react_agent(llm, tools, prompt)
 
-    memory = ConversationBufferWindowMemory(k=5, memory_key="chat_history", return_messages=False)
+    memory = ConversationBufferWindowMemory(k=30, memory_key="chat_history", return_messages=False)
 
     agent_executor = AgentExecutor(
         agent=agent,
@@ -63,7 +63,7 @@ def create_log_agent() -> AgentExecutor:
         verbose=True,
         memory=memory,
         handle_parsing_errors=True,
-        max_iterations=15,
+        max_iterations=30,
     )
 
     return agent_executor
