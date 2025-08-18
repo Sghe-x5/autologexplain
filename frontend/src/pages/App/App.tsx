@@ -1,14 +1,13 @@
-import LogExplainUI from "@/widgets/LogExplainModal";
 import "./App.css";
 import { createPortal } from "react-dom";
 
 import { LogExplainBtn } from "@/widgets/LogExplainModal/components/LogExplainBtn";
 import { useLogExplainModal } from "@/widgets/LogExplainModal/model/useLogExplainModal";
+import LogExplainModal from "@/widgets/LogExplainModal";
 
 function App() {
   const modalRoot = document.getElementById("logExplainModal");
-  const { filters, isFiltersLoaded, isShown, onBackdropClick } =
-    useLogExplainModal();
+  const { isShown, onBackdropClick } = useLogExplainModal();
 
   return (
     <main data-test-id="app-root">
@@ -31,11 +30,7 @@ function App() {
               data-test-id="modal-backdrop"
               onClick={onBackdropClick}
             ></div>
-            <LogExplainUI
-              filters={filters}
-              isFiltersLoaded={isFiltersLoaded}
-              data-test-id="log-explain-ui"
-            />
+            <LogExplainModal />
           </>,
           modalRoot
         )}
