@@ -14,7 +14,7 @@ services:
     networks: [monitoring]
 
   loki:
-    image: grafana/loki:2.9.3
+    image: grafana/loki:3.5.3
     command: -config.file=/etc/loki/config.yml
     ports:
       - "3100:3100"
@@ -35,6 +35,7 @@ services:
     volumes:
         - grafana_data:/var/lib/grafana
         - /opt/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+        - /opt/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
     depends_on:
       - prometheus
       - loki
