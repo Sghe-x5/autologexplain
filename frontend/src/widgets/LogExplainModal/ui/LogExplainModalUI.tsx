@@ -2,10 +2,10 @@ import { LogExplainForm } from "../components/Form";
 import { Separator } from "@/components/ui/separator";
 import { ChatWithAI } from "@/widgets/LogExplainModal/components/ChatWithAI";
 import { Bot, RotateCcw, X } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { type AppDispatch } from "@/lib/store";
 import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
-import { useLogStore } from "../model/store";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "@/lib/store";
+import { resetAnalysis } from "../model/logExplainSlice";
 import Button from "@/components/ui/button/button";
 import { type FilterData } from "@/api/getFilters";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,13 +18,15 @@ export const LogExplainUI = ({
   isFiltersLoaded: boolean;
 }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const hasLog = useLogStore((state) => state.log) !== null;
-  const analysisParams = useLogStore((state) => state.analysisParams);
-
-  const resetLog = useLogStore((state) => state.reset);
+  const hasLog = useSelector(
+    (state: RootState) => state.logExplain.isAnalysisActive
+  );
+  const analysisParams = useSelector(
+    (state: RootState) => state.logExplain.analysisParams
+  );
 
   const onReset = () => {
-    resetLog();
+    dispatch(resetAnalysis());
   };
 
   return (

@@ -13,7 +13,9 @@ import {
   useAutoAnalysisMutation,
 } from "@/api";
 import { wsRegistry } from "@/lib/model/wsRegistry";
-import { useLogStore } from "../model/store";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "@/lib/store";
+import { clearAnalysisParams as clearAnalysisParamsAction } from "../model/logExplainSlice";
 
 interface ChatWithAIProps {
   autoAnalysisParams?: {
@@ -37,7 +39,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   const [chatTurn, { isLoading: isSending }] = useChatTurnMutation();
   const [autoAnalysis] = useAutoAnalysisMutation();
   const [isInitializing, setIsInitializing] = useState(false);
-  const clearAnalysisParams = useLogStore((state) => state.clearAnalysisParams);
+  const dispatch = useDispatch<AppDispatch>();
 
   const [chat, setChat] = useState<{ chatId: string; token: string } | null>(
     null
@@ -46,6 +48,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   const [isAssistantTyping, setIsAssistantTyping] = useState(false);
 
   const initializationRef = useRef(false);
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     return () => {
@@ -65,6 +68,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
       setInput("");
       initializationRef.current = false;
       setIsInitializing(false);
+      seenIdsRef.current = new Set();
     }
   }, [autoAnalysisParams]);
 
@@ -91,6 +95,8 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
               text: "Начинаю анализ логов...",
             } as ChatItem,
           ]);
+          // Track the initial assistant message to avoid re-processing
+          seenIdsRef.current.add("analysis-start");
 
           setIsAssistantTyping(true);
         } catch {
@@ -142,31 +148,31 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
         };
         ws.send(JSON.stringify(message));
         setIsAssistantTyping(true);
-        clearAnalysisParams();
+        dispatch(clearAnalysisParamsAction());
       }
     }
-  }, [chat, autoAnalysisParams, data?.connected, clearAnalysisParams]);
+  }, [chat, autoAnalysisParams, data?.connected, dispatch]);
 
   useEffect(() => {
     if (data?.items?.length) {
-      setMessages((prev) => {
-        const existingIds = new Set(prev.map((m) => m.id));
-        const newMessages = data.items
-          .filter((m: ChatItem) => !existingIds.has(m.id))
-          .map((m: ChatItem) => ({
-            ...m,
-            text: m.text
-              .replace(/^```json\n/, "")
-              .replace(/\n```$/, "")
-              .replace(/Запрос: .*/, ""),
-          }));
+      const seen = seenIdsRef.current;
+      const fresh = data.items
+        .filter((m: ChatItem) => !seen.has(m.id))
+        .map((m: ChatItem) => ({
+          ...m,
+          text: m.text
+            .replace(/^```json\n/, "")
+            .replace(/\n```$/, "")
+            .replace(/Запрос: .*/, ""),
+        }));
 
-        if (newMessages.some((m) => m.role === "assistant")) {
+      if (fresh.length) {
+        fresh.forEach((m) => seen.add(m.id));
+        if (fresh.some((m) => m.role === "assistant")) {
           setIsAssistantTyping(false);
         }
-
-        return newMessages.length ? [...prev, ...newMessages] : prev;
-      });
+        setMessages((prev) => [...prev, ...fresh]);
+      }
     }
   }, [data]);
 
