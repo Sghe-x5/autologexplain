@@ -1,102 +1,56 @@
-import DatePicker from "@/features/DatePicker/DatePicker";
 import Button from "@/components/ui/button/button";
 import {
   Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
 } from "@/components/ui/form";
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useController, type Control } from "react-hook-form";
-import { useMemo } from "react";
 import { Separator } from "@/components/ui/separator";
-import { logFormSchema, type LogExplanation } from "../model/types";
-import { Sparkles } from "lucide-react";
-import { useAutoAnalysisMutation } from "@/api/chatMessagesApi";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "@/lib/store";
-import { startAnalysis } from "../model/logExplainSlice";
-
-import { type FilterData } from "@/api/getFilters";
 import { Textarea } from "@/components/ui/textarea";
+import DatePicker from "@/features/DatePicker/DatePicker";
+import type { UseFormReturn, Control } from "react-hook-form";
+import type { FilterData } from "@/api/getFilters";
+import type { LogExplanation } from "../../../model/types";
 
-// Моковые данные и хранение логов удалены
+export interface FormUIProps {
+  form: UseFormReturn<LogExplanation>;
+  filters: FilterData[];
+  productData?: FilterData;
+  serviceData?: { service: string; environments: string[] };
+  isFormDisabled: boolean;
+  isAnalysisLoading: boolean;
+  onProductChange: (value: string) => void;
+  onServiceChange: (value: string) => void;
+  onEnvironmentChange: (value: string) => void;
+  onSubmit: (values: LogExplanation) => void | Promise<void>;
+}
 
-const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
-  const form = useForm<LogExplanation>({
-    resolver: zodResolver(logFormSchema),
-    defaultValues: {
-      product: "",
-      service: "",
-      environment: "",
-      startTime: new Date(),
-      endTime: new Date(),
-      comment: "",
-    },
-  });
-
-  const dispatch = useDispatch<AppDispatch>();
-  const [autoAnalysis, { isLoading: isAnalysisLoading }] =
-    useAutoAnalysisMutation();
-
-  const onSubmit = async (values: LogExplanation) => {
-    try {
-      const filters = {
-        start_date: values.startTime.toISOString(),
-        end_date: values.endTime.toISOString(),
-        product: values.product,
-        service: values.service,
-        environment: values.environment,
-      };
-      const prompt = "Найди ошибку и объясни из-за чего она возникла";
-      dispatch(startAnalysis({ filters, prompt }));
-      await autoAnalysis();
-    } catch (error) {
-      console.error("Failed to start analysis:", error);
-    }
-  };
-
+export function FormUI({
+  form,
+  filters,
+  productData,
+  serviceData,
+  isFormDisabled,
+  isAnalysisLoading,
+  onProductChange,
+  onServiceChange,
+  onEnvironmentChange,
+  onSubmit,
+}: FormUIProps) {
   const interactiveField =
     "border border-gray-300 rounded-md transition-colors duration-200 " +
     "hover:border-[#2463EB] focus-within:border-[#2463EB] " +
     "focus-within:ring-2 focus-within:ring-[#93C5FD]/40";
-
-  const isFormDisabled = !form.formState.isValid || form.formState.isSubmitting;
-
-  // вместо watch — читаем напрямую через useController внутри каждого поля
-  const { field: productField } = useController({
-    name: "product",
-    control: form.control,
-  });
-  const productData = useMemo(
-    () => filters.find((p) => p.product === productField.value),
-    [filters, productField.value]
-  );
-
-  const { field: serviceField } = useController({
-    name: "service",
-    control: form.control,
-  });
-  const serviceData = useMemo(
-    () => productData?.services.find((s) => s.service === serviceField.value),
-    [productData, serviceField.value]
-  );
-
-  const { field: environmentField } = useController({
-    name: "environment",
-    control: form.control,
-  });
 
   return (
     <Form {...form}>
@@ -109,28 +63,8 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         <FormItem data-test-id="product-select">
           <FormLabel>Продукт</FormLabel>
           <Select
-            onValueChange={(value) => {
-              productField.onChange(value);
-              form.setValue("service", "", {
-                shouldDirty: true,
-                shouldValidate: false,
-                shouldTouch: true,
-              });
-              form.setValue("environment", "", {
-                shouldDirty: true,
-                shouldValidate: false,
-                shouldTouch: true,
-              });
-              form.setValue("startTime", new Date(), {
-                shouldDirty: true,
-                shouldValidate: false,
-              });
-              form.setValue("endTime", new Date(), {
-                shouldDirty: true,
-                shouldValidate: false,
-              });
-            }}
-            value={productField.value}
+            onValueChange={onProductChange}
+            value={form.getValues("product")}
           >
             <FormControl>
               <SelectTrigger
@@ -162,24 +96,9 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         <FormItem data-test-id="service-select">
           <FormLabel>Сервис</FormLabel>
           <Select
-            disabled={!productField.value}
-            onValueChange={(value) => {
-              serviceField.onChange(value);
-              form.setValue("environment", "", {
-                shouldDirty: true,
-                shouldValidate: false,
-                shouldTouch: true,
-              });
-              form.setValue("startTime", new Date(), {
-                shouldDirty: true,
-                shouldValidate: false,
-              });
-              form.setValue("endTime", new Date(), {
-                shouldDirty: true,
-                shouldValidate: false,
-              });
-            }}
-            value={serviceField.value}
+            disabled={!form.getValues("product")}
+            onValueChange={onServiceChange}
+            value={form.getValues("service")}
           >
             <FormControl>
               <SelectTrigger
@@ -211,13 +130,9 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         <FormItem data-test-id="environment-select">
           <FormLabel>Окружение</FormLabel>
           <Select
-            disabled={!serviceField.value}
-            onValueChange={(value) => {
-              environmentField.onChange(value);
-              form.setValue("startTime", new Date());
-              form.setValue("endTime", new Date());
-            }}
-            value={environmentField.value}
+            disabled={!form.getValues("service")}
+            onValueChange={onEnvironmentChange}
+            value={form.getValues("environment")}
           >
             <FormControl>
               <SelectTrigger
@@ -258,7 +173,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                     <div className={interactiveField}>
                       <div
                         className={
-                          !environmentField.value
+                          !form.getValues("environment")
                             ? "pointer-events-none opacity-50"
                             : ""
                         }
@@ -287,7 +202,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                     <div className={interactiveField}>
                       <div
                         className={
-                          !environmentField.value
+                          !form.getValues("environment")
                             ? "pointer-events-none opacity-50"
                             : ""
                         }
@@ -311,25 +226,26 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         </FormItem>
 
         {/* Комментарий */}
-        <CommentField control={form.control} disabled={!productField.value} />
+        <CommentField
+          control={form.control}
+          disabled={!form.getValues("product")}
+        />
 
         <Separator data-test-id="form-separator" />
 
         <Button
           type="submit"
           className="bg-[#2463EB] text-[#FAFAFA] hover:bg-[#1C4ED8] hover:border hover:border-[#1C4ED8] cursor-pointer"
-          disabled={isFormDisabled || isAnalysisLoading}
+          disabled={isFormDisabled}
           data-test-id="analyze-submit-button"
         >
-          <Sparkles />{" "}
           {isAnalysisLoading ? "Анализирую..." : "Анализировать логи"}
         </Button>
       </form>
     </Form>
   );
-};
+}
 
-/** Вынесенное поле комментария */
 function CommentField({
   control,
   disabled,
@@ -337,7 +253,10 @@ function CommentField({
   control: Control<LogExplanation>;
   disabled: boolean;
 }) {
-  const { field } = useController({ name: "comment", control });
+  const { field } = (Form as any).useController
+    ? (Form as any).useController({ name: "comment", control })
+    : { field: { value: "", onChange: () => {} } };
+
   const charCount = field.value?.length ?? 0;
   const percent = Math.min((charCount / 1000) * 100, 100);
   const counterColor =
@@ -372,5 +291,3 @@ function CommentField({
     </FormItem>
   );
 }
-
-export { LogExplainForm };
