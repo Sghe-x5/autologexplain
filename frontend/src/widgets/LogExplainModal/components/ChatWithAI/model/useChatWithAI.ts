@@ -12,6 +12,24 @@ import {
   useAutoAnalysisMutation,
 } from "@/api";
 
+// ключи для localStorage / cookie
+const LS_MESSAGES_KEY = "chat_messages";
+const COOKIE_CHAT_KEY = "chat_session"; // chat_id + token JSON
+
+// утилита работы с куками
+function setCookie(name: string, value: string, days = 7) {
+  const d = new Date();
+  d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`;
+}
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
+}
+
 export interface UseChatWithAIParams {
   autoAnalysisParams?: {
     filters: {
@@ -26,7 +44,12 @@ export interface UseChatWithAIParams {
 }
 
 export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
-  const [messages, setMessages] = useState<ChatItem[]>([]);
+  // при инициализации — восстанавливаем состояние
+  const [messages, setMessages] = useState<ChatItem[]>(() => {
+    const saved = localStorage.getItem(LS_MESSAGES_KEY);
+    return saved ? (JSON.parse(saved) as ChatItem[]) : [];
+  });
+
   const [input, setInput] = useState("");
   const [newChat] = useNewChatMutation();
   const [chatTurn, { isLoading: isSending }] = useChatTurnMutation();
@@ -35,7 +58,10 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
   const dispatch = useDispatch<AppDispatch>();
 
   const [chat, setChat] = useState<{ chatId: string; token: string } | null>(
-    null
+    () => {
+      const cookie = getCookie(COOKIE_CHAT_KEY);
+      return cookie ? JSON.parse(cookie) : null;
+    }
   );
 
   const [isAssistantTyping, setIsAssistantTyping] = useState(false);
@@ -43,6 +69,19 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
   const initializationRef = useRef(false);
   const seenIdsRef = useRef<Set<string>>(new Set());
 
+  // сохраняем messages в localStorage
+  useEffect(() => {
+    localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(messages));
+  }, [messages]);
+
+  // сохраняем chat в cookie
+  useEffect(() => {
+    if (chat) {
+      setCookie(COOKIE_CHAT_KEY, JSON.stringify(chat));
+    }
+  }, [chat]);
+
+  // при размонтировании закрываем ws
   useEffect(() => {
     return () => {
       if (chat) {
@@ -55,9 +94,11 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
     };
   }, [chat]);
 
+  // сброс состояния если autoAnalysisParams убрали
   useEffect(() => {
     if (autoAnalysisParams === undefined) {
       setMessages([]);
+      localStorage.removeItem(LS_MESSAGES_KEY);
       setInput("");
       initializationRef.current = false;
       setIsInitializing(false);
@@ -89,7 +130,6 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
             } as ChatItem,
           ]);
           seenIdsRef.current.add("analysis-start");
-
           setIsAssistantTyping(true);
         } catch {
           setMessages([
@@ -176,7 +216,7 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
 
     setMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role: "user", text } as ChatItem,
+      { id: crypto.randomUUID(), role: "user", text },
     ]);
 
     setIsAssistantTyping(true);
@@ -188,6 +228,15 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
     }
   };
 
+  // очищение для нового чата
+  const resetChat = () => {
+    setMessages([]);
+    setChat(null);
+    deleteCookie(COOKIE_CHAT_KEY);
+    localStorage.removeItem(LS_MESSAGES_KEY);
+    seenIdsRef.current.clear();
+  };
+
   return {
     messages,
     input,
@@ -195,5 +244,6 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
     isSending,
     setInput,
     sendMessage,
+    resetChat, // вот тут точка, чтобы "забыть" старый чат
   } as const;
 }
