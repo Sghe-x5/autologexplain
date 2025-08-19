@@ -253,41 +253,45 @@ function CommentField({
   control: Control<LogExplanation>;
   disabled: boolean;
 }) {
-  const { field } = (Form as any).useController
-    ? (Form as any).useController({ name: "comment", control })
-    : { field: { value: "", onChange: () => {} } };
-
-  const charCount = field.value?.length ?? 0;
-  const percent = Math.min((charCount / 1000) * 100, 100);
-  const counterColor =
-    percent >= 100
-      ? "text-red-500"
-      : percent >= 80
-      ? "text-yellow-500"
-      : "text-muted-foreground";
-
   return (
-    <FormItem data-test-id="comment-field">
-      <FormLabel>Задать вопрос или уточнение AI ассистенту</FormLabel>
-      <FormControl>
-        <Textarea
-          {...field}
-          disabled={disabled}
-          maxLength={1000}
-          placeholder="Например: что означает эта ошибка..."
-          className="min-h-[200px] max-h-[300px] resize-y"
-          data-test-id="comment-textarea"
-        />
-      </FormControl>
-      <div className="flex items-center justify-between mt-1">
-        <span
-          className={`text-xs ml-auto ${counterColor}`}
-          data-test-id="comment-counter"
-        >
-          {charCount}/1000
-        </span>
-      </div>
-      <FormMessage />
-    </FormItem>
+    <FormField
+      control={control}
+      name="comment"
+      render={({ field }) => {
+        const charCount = field.value?.length ?? 0;
+        const percent = Math.min((charCount / 1000) * 100, 100);
+        const counterColor =
+          percent >= 100
+            ? "text-red-500"
+            : percent >= 80
+            ? "text-yellow-500"
+            : "text-muted-foreground";
+
+        return (
+          <FormItem data-test-id="comment-field">
+            <FormLabel>Задать вопрос или уточнение AI ассистенту</FormLabel>
+            <FormControl>
+              <Textarea
+                {...field}
+                disabled={disabled}
+                maxLength={1000}
+                placeholder="Например: что означает эта ошибка..."
+                className="min-h-[200px] max-h-[300px] resize-y"
+                data-test-id="comment-textarea"
+              />
+            </FormControl>
+            <div className="flex items-center justify-between mt-1">
+              <span
+                className={`text-xs ml-auto ${counterColor}`}
+                data-test-id="comment-counter"
+              >
+                {charCount}/1000
+              </span>
+            </div>
+            <FormMessage />
+          </FormItem>
+        );
+      }}
+    />
   );
 }
