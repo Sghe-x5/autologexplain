@@ -13,8 +13,22 @@ export function useLogExplainModalUI() {
     (state: RootState) => state.logExplain.analysisParams
   );
 
+  const LS_MESSAGES_KEY = "chat_messages";
+  const COOKIE_CHAT_KEY = "chat_session";
+  const deleteCookie = (name: string) => {
+    try {
+      document.cookie = `${name}=; Max-Age=0; path=/`;
+    } catch {}
+  };
+
   const onClose = () => dispatch(close());
-  const onReset = () => dispatch(resetAnalysis());
+  const onReset = () => {
+    try {
+      localStorage.removeItem(LS_MESSAGES_KEY);
+    } catch {}
+    deleteCookie(COOKIE_CHAT_KEY);
+    dispatch(resetAnalysis());
+  };
 
   return { isAnalysisActive, analysisParams, onClose, onReset } as const;
 }
