@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.api.logs import router as logs_router
 
 
 @asynccontextmanager
@@ -22,3 +23,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(logs_router, prefix="/logs", tags=["logs"])
