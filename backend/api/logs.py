@@ -8,6 +8,7 @@ from loguru import logger
 
 from backend.core.config import get_settings
 from backend.db.db import query
+from backend.services.log_tags import ALLOWED_CATEGORIES, ALLOWED_SEVERITIES, enrich_log_record
 
 router = APIRouter()
 _MAX_LIST_LIMIT = 1000
@@ -147,6 +148,8 @@ def list_logs(
     service: str | None = None,
     environment: str | None = None,
     level: str | None = None,
+    severity: str | None = Query(None, enum=ALLOWED_SEVERITIES, description="Derived severity"),
+    category: str | None = Query(None, enum=ALLOWED_CATEGORIES, description="Derived category"),
     q: str | None = Query(None, description="Substring search in message (case-insensitive)"),
 ):
     """
@@ -167,4 +170,12 @@ def list_logs(
         logger.exception("Failed to load logs list")
         raise HTTPException(status_code=500, detail="failed_to_fetch_logs") from e
 
-    return {"items": rows, "count": len(rows)}
+    enriched = [enrich_log_record(r) for r in rows]
+    if severity:
+        enriched = [r for r in enriched if r.get("severity") == severity]
+    if category:
+        enriched = [r for r in enriched if r.get("category") == category]
+
+    return {"items": enriched, "count": len(enriched)}
+
+
