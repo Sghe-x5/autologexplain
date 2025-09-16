@@ -179,3 +179,47 @@ def list_logs(
     return {"items": enriched, "count": len(enriched)}
 
 
+@router.get("/categories")
+def categories_summary(
+    *,
+    limit: int = Query(500, ge=1, le=_MAX_LIST_LIMIT),
+    product: str | None = None,
+    service: str | None = None,
+    environment: str | None = None,
+    level: str | None = None,
+    q: str | None = Query(None, description="Substring search in message (case-insensitive)"),
+):
+    """
+    Группировка логов по категориям и уровням (первые N записей).
+    Использует ту же выборку, что и /logs/list, но возвращает агрегаты.
+    """
+    try:
+        rows = _fetch_logs(
+            limit=limit,
+            product=product,
+            service=service,
+            environment=environment,
+            level=level,
+            q=q,
+        )
+    except Exception as e:
+        logger.exception("Failed to aggregate logs by category")
+        raise HTTPException(status_code=500, detail="failed_to_fetch_logs") from e
+
+    enriched = [enrich_log_record(r) for r in rows]
+
+    category_counts: dict[str, int] = defaultdict(int)
+    level_counts: dict[str, int] = defaultdict(int)
+
+    for item in enriched:
+        category_counts[item.get("category", "unknown")] += 1
+        level_counts[item.get("severity", "info")] += 1
+
+    categories = sorted(category_counts.items(), key=lambda x: (-x[1], x[0]))
+    levels = sorted(level_counts.items(), key=lambda x: (-x[1], x[0]))
+
+    return {
+        "total": len(rows),
+        "categories": [{"category": c, "count": cnt} for c, cnt in categories],
+        "levels": [{"severity": lv, "count": cnt} for lv, cnt in levels],
+    }
