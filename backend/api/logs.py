@@ -3,10 +3,12 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+import redis
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from backend.core.config import get_settings
+from backend.db.db import ping as ch_ping
 from backend.db.db import query
 from backend.services.log_tags import ALLOWED_CATEGORIES, ALLOWED_SEVERITIES, enrich_log_record
 
@@ -138,6 +140,34 @@ def get_products_services_tree():
     return result
 
 
+@router.get("/health")
+def health():
+    """
+    Healthcheck для сервиса логов: ClickHouse + Redis.
+    """
+    s = get_settings()
+
+    try:
+        ch_ok = bool(ch_ping())
+    except Exception:
+        ch_ok = False
+
+    try:
+        r = redis.Redis(
+            host=s.REDIS_HOST,
+            port=int(s.REDIS_PORT),
+            db=int(s.REDIS_DB),
+            password=s.REDIS_PASSWORD or None,
+            socket_timeout=1.0,
+            socket_connect_timeout=1.0,
+        )
+        r.ping()
+        redis_ok = True
+    except Exception:
+        redis_ok = False
+
+    status = "ok" if (ch_ok and redis_ok) else ("degraded" if (ch_ok or redis_ok) else "down")
+    return {"status": status, "clickhouse": ch_ok, "redis": redis_ok}
 
 
 @router.get("/list")

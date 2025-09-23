@@ -6,10 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.logs import router as logs_router
+from backend.db.storage import init_store
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_store()
     yield
 
 
