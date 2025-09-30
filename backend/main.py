@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.chats import router as chats_router
 from backend.api.logs import router as logs_router
+from backend.api.ws import router as ws_router
 from backend.db.storage import init_store
 
 
@@ -28,3 +29,4 @@ app.add_middleware(
 
 app.include_router(chats_router, prefix="/chats", tags=["chats"])
 app.include_router(logs_router, prefix="/logs", tags=["logs"])
+app.include_router(ws_router, tags=["ws"])
