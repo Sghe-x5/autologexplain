@@ -20,6 +20,7 @@ COPY backend/pyproject.toml backend/poetry.lock* ./backend/
 RUN cd backend && poetry install --only main --no-root
 
 COPY backend ./backend
+COPY analytics ./analytics
 
 EXPOSE 8080
 

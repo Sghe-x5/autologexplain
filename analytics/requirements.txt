@@ -1,0 +1,10 @@
+langchain
+langchain-openai
+langchain-community
+langchain-experimental
+langchain-openrouter
+clickhouse-connect
+pydantic<2
+python-dotenv
+pandas
+lark
