@@ -10,6 +10,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
 from redis.asyncio import Redis
 
+from backend.celery_worker import run_analysis_pubsub
 from backend.core.config import get_settings
 from backend.services.tokens import verify_chat_token
 
@@ -113,6 +114,22 @@ async def ws_chat(websocket: WebSocket, chat_id: str):
 
             if msg_type == "ping":
                 await _send_json(websocket, {"type": "pong"})
+                continue
+
+            if msg_type == "analysis_start":
+                request_id = payload.get("request_id") or f"ws-{uuid.uuid4()}"
+                filters = payload.get("filters") or {}
+                if not isinstance(filters, dict):
+                    await _send_err(websocket, "bad_filters")
+                    continue
+                prompt = payload.get("prompt")
+                try:
+                    run_analysis_pubsub.delay(request_id, chat_id, filters, prompt)
+                except Exception as e:
+                    logger.exception("Failed to enqueue analysis task")
+                    await _send_err(websocket, "queue_unavailable", str(e))
+                    continue
+                await _send_json(websocket, {"type": "accepted", "request_id": request_id})
                 continue
 
             await _send_err(websocket, "unsupported_message")
