@@ -34,6 +34,11 @@ celery_app.conf.update(
 )
 
 
+class EmptyChatTurnError(ValueError):
+    """Raised when chat_turn content is empty."""
+
+    def __init__(self) -> None:
+        super().__init__("Empty content for chat_turn")
 
 
 def _finalize(chat_id: str, request_id: str, content: str) -> None:
@@ -52,6 +57,12 @@ def _finalize(chat_id: str, request_id: str, content: str) -> None:
     )
 
 
+def _validate_chat_turn_message(user_message: str) -> None:
+    """
+    Проверяет, что сообщение пользователя не пустое.
+    """
+    if not user_message:
+        raise EmptyChatTurnError()
 
 
 @celery_app.task(
@@ -107,6 +118,44 @@ def run_analysis_pubsub(
         raise
 
 
+@celery_app.task(
+    bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3}
+)
+def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str) -> None:
+    """
+    Обычный ход диалога (`chat_turn`): передаём только текст пользователя в ИИ.
+    """
+    try:
+        user_message = (content or "").strip()
+        logger.info(
+            "[chat_turn] chat_id={} req={} content_present={}",
+            chat_id,
+            request_id,
+            bool(user_message),
+        )
+
+        _validate_chat_turn_message(user_message)
+
+        try:
+            add_message(chat_id, "user", user_message, {})
+        except Exception:
+            logger.exception("failed to add user message to chat history (chat_turn)")
+
+        answer = ask_llm(user_message, chat_id=chat_id)
+        _finalize(chat_id, request_id, answer)
+
+    except Exception as e:
+        logger.exception("chat_turn_pubsub failed")
+        publish_ws_message(
+            chat_id,
+            {
+                "type": "error",
+                "request_id": request_id,
+                "code": "chat_turn_failed",
+                "detail": str(e),
+            },
+        )
+        raise
 
 
 

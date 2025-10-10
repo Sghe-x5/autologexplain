@@ -10,7 +10,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
 from redis.asyncio import Redis
 
-from backend.celery_worker import run_analysis_pubsub
+from backend.celery_worker import chat_turn_pubsub, run_analysis_pubsub
 from backend.core.config import get_settings
 from backend.services.tokens import verify_chat_token
 
@@ -127,6 +127,21 @@ async def ws_chat(websocket: WebSocket, chat_id: str):
                     run_analysis_pubsub.delay(request_id, chat_id, filters, prompt)
                 except Exception as e:
                     logger.exception("Failed to enqueue analysis task")
+                    await _send_err(websocket, "queue_unavailable", str(e))
+                    continue
+                await _send_json(websocket, {"type": "accepted", "request_id": request_id})
+                continue
+
+            if msg_type == "chat_turn":
+                request_id = payload.get("request_id") or f"ws-{uuid.uuid4()}"
+                content = payload.get("content", "")
+                if not isinstance(content, str) or not content.strip():
+                    await _send_err(websocket, "empty_content")
+                    continue
+                try:
+                    chat_turn_pubsub.delay(request_id, chat_id, content)
+                except Exception as e:
+                    logger.exception("Failed to enqueue chat_turn task")
                     await _send_err(websocket, "queue_unavailable", str(e))
                     continue
                 await _send_json(websocket, {"type": "accepted", "request_id": request_id})
