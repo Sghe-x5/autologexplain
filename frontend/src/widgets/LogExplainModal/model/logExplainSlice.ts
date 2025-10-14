@@ -17,27 +17,7 @@ interface LogExplainState {
   analysisParams: AnalysisParams | null;
 }
 
-const LOG_EXPLAIN_PERSIST_KEY = "logExplainState";
-
-function loadInitialState(): LogExplainState {
-  try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      const raw = localStorage.getItem(LOG_EXPLAIN_PERSIST_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<LogExplainState>;
-        return {
-          isAnalysisActive: Boolean(parsed.isAnalysisActive),
-          analysisParams: parsed.analysisParams ?? null,
-        };
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return { isAnalysisActive: false, analysisParams: null };
-}
-
-const initialState: LogExplainState = loadInitialState();
+const initialState: LogExplainState = { isAnalysisActive: false, analysisParams: null };
 
 const logExplainSlice = createSlice({
   name: "logExplain",
