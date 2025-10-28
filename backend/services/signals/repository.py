@@ -42,6 +42,37 @@ def _next_version(moment: datetime, offset: int = 0) -> int:
     return int(moment.timestamp() * 1_000_000) + offset
 
 
+def fetch_logs_for_signalization(
+    *,
+    start_ts: datetime,
+    end_ts: datetime,
+    limit: int,
+) -> list[dict[str, Any]]:
+    safe_limit = _safe_limit(limit)
+    settings = get_settings()
+    sql = f"""
+        SELECT
+            timestamp,
+            product,
+            service,
+            environment,
+            level,
+            status_code,
+            trace_id,
+            message,
+            metadata
+        FROM {settings.CLICKHOUSE_TABLE}
+        WHERE timestamp >= %(start_ts)s AND timestamp < %(end_ts)s
+        ORDER BY timestamp ASC
+        LIMIT {safe_limit}
+    """
+    return query(
+        sql,
+        {
+            "start_ts": start_ts.astimezone(UTC).replace(tzinfo=None),
+            "end_ts": end_ts.astimezone(UTC).replace(tzinfo=None),
+        },
+    )
 
 
 def _insert_rows(table: str, columns: list[str], rows: list[dict[str, Any]]) -> None:
@@ -79,6 +110,18 @@ def insert_fingerprint_snapshots(rows: list[dict[str, Any]]) -> None:
     _insert_rows("fingerprint_catalog", columns, rows)
 
 
+def insert_log_signals(rows: list[dict[str, Any]]) -> None:
+    columns = [
+        "service",
+        "environment",
+        "category",
+        "severity",
+        "fingerprint",
+        "minute_bucket",
+        "count",
+        "created_at",
+    ]
+    _insert_rows("log_signals_1m", columns, rows)
 
 
 

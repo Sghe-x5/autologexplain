@@ -6,6 +6,21 @@ from backend.db.db import client
 
 _DDL_STATEMENTS: tuple[str, ...] = (
     """
+    CREATE TABLE IF NOT EXISTS log_signals_1m (
+        service String,
+        environment String,
+        category LowCardinality(String),
+        severity LowCardinality(String),
+        fingerprint String,
+        minute_bucket DateTime,
+        count UInt64,
+        created_at DateTime DEFAULT now()
+    )
+    ENGINE = ReplacingMergeTree(created_at)
+    PARTITION BY toDate(minute_bucket)
+    ORDER BY (service, environment, category, severity, fingerprint, minute_bucket)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS fingerprint_catalog (
         fingerprint String,
         service String,
