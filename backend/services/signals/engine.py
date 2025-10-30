@@ -11,6 +11,7 @@ from backend.services.log_fingerprints import (
 )
 from backend.services.signals.repository import fetch_logs_for_signalization, insert_log_signals, register_fingerprint_observations
 from backend.services.signals.schema import ensure_signal_tables
+from backend.services.signals.state import get_signalization_watermark, set_signalization_watermark
 
 ANOMALY_TYPE_VOLUME_SPIKE = "volume_spike"
 ANOMALY_TYPE_NEW_FINGERPRINT_BURST = "new_fingerprint_burst"
@@ -71,7 +72,7 @@ def run_signalization_cycle(
 
     now = utcnow()
     current_minute = _bucket_minute(now)
-    watermark = _initial_watermark(now, initial_lookback_minutes)
+    watermark = get_signalization_watermark() or _initial_watermark(now, initial_lookback_minutes)
     next_minute = _bucket_minute(watermark)
 
     if next_minute >= current_minute:
@@ -191,6 +192,7 @@ def run_signalization_cycle(
 
     insert_log_signals(signal_rows)
     fingerprint_updates = register_fingerprint_observations(fingerprint_rows)
+    set_signalization_watermark(last_completed_minute + timedelta(minutes=1))
 
     return {
         "logs": processed_logs,
