@@ -101,7 +101,7 @@ def run_signalization_cycle(
         rows = fetch_logs_for_signalization(
             start_ts=next_minute,
             end_ts=window_end,
-            limit=safe_rows,
+            limit=safe_rows + 1,
         )
 
         if len(rows) > safe_rows:
