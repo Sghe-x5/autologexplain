@@ -124,12 +124,138 @@ def insert_log_signals(rows: list[dict[str, Any]]) -> None:
     _insert_rows("log_signals_1m", columns, rows)
 
 
+def insert_anomaly_events(rows: list[dict[str, Any]]) -> None:
+    columns = [
+        "anomaly_id",
+        "anomaly_type",
+        "service",
+        "environment",
+        "category",
+        "severity",
+        "fingerprint",
+        "minute_bucket",
+        "signal_count",
+        "baseline_count",
+        "history_samples",
+        "history_total",
+        "score",
+        "evidence_json",
+        "created_at",
+    ]
+    _insert_rows("anomaly_events", columns, rows)
 
 
+def _signal_history_key(
+    service: str,
+    environment: str,
+    category: str,
+    severity: str,
+    fingerprint: str,
+) -> tuple[str, str, str, str, str]:
+    return service, environment, category, severity, fingerprint
 
 
+def fetch_signal_rows_for_detection(
+    *,
+    start_ts: datetime,
+    end_ts: datetime,
+    limit: int,
+) -> list[dict[str, Any]]:
+    safe_limit = _safe_limit(limit)
+    sql = f"""
+        SELECT
+            service,
+            environment,
+            category,
+            severity,
+            fingerprint,
+            minute_bucket,
+            sum(count) AS count
+        FROM log_signals_1m
+        WHERE minute_bucket >= %(start_ts)s AND minute_bucket < %(end_ts)s
+        GROUP BY service, environment, category, severity, fingerprint, minute_bucket
+        ORDER BY
+            minute_bucket ASC,
+            service ASC,
+            environment ASC,
+            category ASC,
+            severity ASC,
+            fingerprint ASC
+        LIMIT {safe_limit}
+    """
+    return query(
+        sql,
+        {
+            "start_ts": start_ts.astimezone(UTC).replace(tzinfo=None),
+            "end_ts": end_ts.astimezone(UTC).replace(tzinfo=None),
+        },
+        json_columns=(),
+    )
 
 
+def fetch_signal_history_stats(
+    *,
+    signal_keys: list[tuple[str, str, str, str, str]],
+    start_ts: datetime,
+    end_ts: datetime,
+) -> dict[tuple[str, str, str, str, str], dict[str, Any]]:
+    unique_keys = sorted(set(signal_keys))
+    if not unique_keys:
+        return {}
+
+    sql_list = ", ".join(
+        f"({_quote_sql(service)}, {_quote_sql(environment)}, {_quote_sql(category)}, "
+        f"{_quote_sql(severity)}, {_quote_sql(fingerprint)})"
+        for service, environment, category, severity, fingerprint in unique_keys
+    )
+    sql = f"""
+        SELECT
+            service,
+            environment,
+            category,
+            severity,
+            fingerprint,
+            count() AS history_samples,
+            sum(signal_count) AS history_total,
+            avg(signal_count) AS history_avg,
+            quantileExact(0.5)(signal_count) AS history_median,
+            max(signal_count) AS history_max
+        FROM (
+            SELECT
+                service,
+                environment,
+                category,
+                severity,
+                fingerprint,
+                minute_bucket,
+                sum(count) AS signal_count
+            FROM log_signals_1m
+            WHERE minute_bucket >= %(start_ts)s
+              AND minute_bucket < %(end_ts)s
+              AND (service, environment, category, severity, fingerprint) IN ({sql_list})
+            GROUP BY service, environment, category, severity, fingerprint, minute_bucket
+        )
+        GROUP BY service, environment, category, severity, fingerprint
+    """
+    rows = query(
+        sql,
+        {
+            "start_ts": start_ts.astimezone(UTC).replace(tzinfo=None),
+            "end_ts": end_ts.astimezone(UTC).replace(tzinfo=None),
+        },
+        json_columns=(),
+    )
+    out: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = _signal_history_key(
+            str(row.get("service") or "unknown"),
+            str(row.get("environment") or "unknown"),
+            str(row.get("category") or "unknown"),
+            str(row.get("severity") or "info"),
+            str(row.get("fingerprint") or ""),
+        )
+        out[key] = row
+    return out
 
 
 def fetch_fingerprint_cards(fingerprints: list[str]) -> dict[str, dict[str, Any]]:

@@ -38,6 +38,28 @@ _DDL_STATEMENTS: tuple[str, ...] = (
     PARTITION BY toDate(first_seen)
     ORDER BY (fingerprint, version)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS anomaly_events (
+        anomaly_id String,
+        anomaly_type LowCardinality(String),
+        service String,
+        environment String,
+        category LowCardinality(String),
+        severity LowCardinality(String),
+        fingerprint String,
+        minute_bucket DateTime,
+        signal_count UInt64,
+        baseline_count Float64,
+        history_samples UInt32,
+        history_total UInt64,
+        score Float64,
+        evidence_json String,
+        created_at DateTime DEFAULT now()
+    )
+    ENGINE = ReplacingMergeTree(created_at)
+    PARTITION BY toDate(minute_bucket)
+    ORDER BY (anomaly_id, minute_bucket)
+    """,
 )
 
 
