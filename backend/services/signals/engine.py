@@ -194,6 +194,48 @@ def _detect_signal_anomalies(
                 }
             )
 
+    if current_count >= max(new_fingerprint_min_count, 1) and history_total <= max(
+        new_fingerprint_max_history_total, 0
+    ):
+        burst_ratio = current_count / max(history_total + 1, 1)
+        anomalies.append(
+            {
+                "anomaly_id": _make_anomaly_id(
+                    anomaly_type=ANOMALY_TYPE_NEW_FINGERPRINT_BURST,
+                    minute_bucket=minute_bucket,
+                    service=service,
+                    environment=environment,
+                    category=category,
+                    severity=severity,
+                    fingerprint=fingerprint,
+                ),
+                "anomaly_type": ANOMALY_TYPE_NEW_FINGERPRINT_BURST,
+                "service": service,
+                "environment": environment,
+                "category": category,
+                "severity": severity,
+                "fingerprint": fingerprint,
+                "minute_bucket": minute_bucket,
+                "signal_count": current_count,
+                "baseline_count": history_avg,
+                "history_samples": history_samples,
+                "history_total": history_total,
+                "score": round(burst_ratio, 2),
+                "evidence_json": _make_evidence_json(
+                    {
+                        "count_now": current_count,
+                        "history_samples": history_samples,
+                        "history_total": history_total,
+                        "history_avg": round(history_avg, 2),
+                        "burst_ratio": round(burst_ratio, 2),
+                        "history_start": history_start.isoformat(),
+                        "history_end": history_end.isoformat(),
+                    }
+                ),
+                "created_at": created_at,
+            }
+        )
+
     return anomalies
 
 
