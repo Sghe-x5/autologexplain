@@ -8,7 +8,13 @@ from loguru import logger
 
 from backend.core.config import get_settings
 from backend.db.storage import add_message
+from backend.services.incidents import log_cycle_result
+from backend.services.incidents.redis_cache import distributed_lock
 from backend.services.llm_service import ask_llm
+from backend.services.signals import (
+    run_anomaly_detection_cycle as run_anomaly_detection_cycle_engine,
+)
+from backend.services.signals import run_signalization_cycle as run_signalization_cycle_engine
 from backend.services.utils import publish_ws_message
 
 s = get_settings()
@@ -30,6 +36,14 @@ celery_app.conf.update(
     },
     result_expires=3600,
     beat_schedule={
+        "signals-signalization-worker": {
+            "task": "signals.signalization_worker",
+            "schedule": max(60, int(s.SIGNALIZATION_INTERVAL_MINUTES) * 60),
+        },
+        "signals-anomaly-detector-worker": {
+            "task": "signals.anomaly_detector_worker",
+            "schedule": max(60, int(s.ANOMALY_DETECTOR_INTERVAL_MINUTES) * 60),
+        },
     },
 )
 
@@ -160,8 +174,45 @@ def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str) -> None:
 
 
 
+@celery_app.task(name="signals.signalization_worker")
+def run_signalization_worker() -> None:
+    with distributed_lock(
+        "signalization-worker",
+        ttl_seconds=max(int(s.SIGNALIZATION_JOB_LOCK_TTL_SECONDS), 30),
+    ) as acquired:
+        if not acquired:
+            logger.info("signals.signalization_worker skipped: lock is already held")
+            return
+        result = run_signalization_cycle_engine(
+            initial_lookback_minutes=int(s.SIGNALIZATION_INITIAL_LOOKBACK_MINUTES),
+            max_minutes_per_cycle=int(s.SIGNALIZATION_MAX_MINUTES_PER_CYCLE),
+            max_rows_per_minute=int(s.SIGNALIZATION_MAX_ROWS_PER_MINUTE),
+        )
+        log_cycle_result("signalization-worker", result)
 
 
+@celery_app.task(name="signals.anomaly_detector_worker")
+def run_anomaly_detector_worker() -> None:
+    with distributed_lock(
+        "anomaly-detector-worker",
+        ttl_seconds=max(int(s.ANOMALY_DETECTOR_JOB_LOCK_TTL_SECONDS), 30),
+    ) as acquired:
+        if not acquired:
+            logger.info("signals.anomaly_detector_worker skipped: lock is already held")
+            return
+        result = run_anomaly_detection_cycle_engine(
+            initial_lookback_minutes=int(s.ANOMALY_DETECTOR_INITIAL_LOOKBACK_MINUTES),
+            history_window_minutes=int(s.ANOMALY_DETECTOR_HISTORY_WINDOW_MINUTES),
+            max_minutes_per_cycle=int(s.ANOMALY_DETECTOR_MAX_MINUTES_PER_CYCLE),
+            max_signals_per_minute=int(s.ANOMALY_DETECTOR_MAX_SIGNALS_PER_MINUTE),
+            volume_min_baseline_samples=int(s.ANOMALY_VOLUME_MIN_BASELINE_SAMPLES),
+            volume_min_count=int(s.ANOMALY_VOLUME_MIN_COUNT),
+            volume_ratio_threshold=float(s.ANOMALY_VOLUME_RATIO_THRESHOLD),
+            volume_delta_threshold=int(s.ANOMALY_VOLUME_DELTA_THRESHOLD),
+            new_fingerprint_min_count=int(s.ANOMALY_NEW_FINGERPRINT_MIN_COUNT),
+            new_fingerprint_max_history_total=int(s.ANOMALY_NEW_FINGERPRINT_MAX_HISTORY_TOTAL),
+        )
+        log_cycle_result("anomaly-detector-worker", result)
 
 
 
