@@ -173,6 +173,283 @@ def fetch_pending_candidates(*, lookback_minutes: int, limit: int) -> list[dict[
     return query(sql, {"lookback_minutes": max(lookback_minutes, 1)})
 
 
+def fetch_incident_card(incident_id: str) -> dict[str, Any] | None:
+    sql = """
+        SELECT
+            incident_id,
+            max(version) AS max_version,
+            argMax(fingerprint, version) AS fingerprint,
+            argMax(title, version) AS title,
+            argMax(status, version) AS status,
+            argMax(service, version) AS service,
+            argMax(environment, version) AS environment,
+            argMax(category, version) AS category,
+            argMax(severity, version) AS severity,
+            argMax(opened_at, version) AS opened_at,
+            argMax(acknowledged_at, version) AS acknowledged_at,
+            argMax(mitigated_at, version) AS mitigated_at,
+            argMax(resolved_at, version) AS resolved_at,
+            argMax(last_seen_at, version) AS last_seen_at,
+            argMax(root_cause_service, version) AS root_cause_service,
+            argMax(root_cause_score, version) AS root_cause_score,
+            argMax(impact_score, version) AS impact_score,
+            argMax(burn_rate_5m, version) AS burn_rate_5m,
+            argMax(burn_rate_1h, version) AS burn_rate_1h,
+            argMax(burn_rate_6h, version) AS burn_rate_6h,
+            argMax(affected_services, version) AS affected_services,
+            argMax(critical_rate, version) AS critical_rate,
+            argMax(prod_weight, version) AS prod_weight,
+            argMax(evidence, version) AS evidence,
+            argMax(context_json, version) AS context_json,
+            argMax(created_at, version) AS created_at,
+            argMax(updated_at, version) AS updated_at
+        FROM incidents
+        WHERE incident_id = %(incident_id)s
+        GROUP BY incident_id
+        LIMIT 1
+    """
+    rows = query(sql, {"incident_id": incident_id}, json_columns=())
+    return rows[0] if rows else None
+
+
+def fetch_latest_incident_for_key(
+    *,
+    fingerprint: str,
+    service: str,
+    environment: str,
+    category: str,
+) -> dict[str, Any] | None:
+    sql = """
+        SELECT
+            incident_id,
+            max(version) AS max_version,
+            argMax(fingerprint, version) AS fingerprint,
+            argMax(title, version) AS title,
+            argMax(status, version) AS status,
+            argMax(service, version) AS service,
+            argMax(environment, version) AS environment,
+            argMax(category, version) AS category,
+            argMax(severity, version) AS severity,
+            argMax(opened_at, version) AS opened_at,
+            argMax(acknowledged_at, version) AS acknowledged_at,
+            argMax(mitigated_at, version) AS mitigated_at,
+            argMax(resolved_at, version) AS resolved_at,
+            argMax(last_seen_at, version) AS last_seen_at,
+            argMax(root_cause_service, version) AS root_cause_service,
+            argMax(root_cause_score, version) AS root_cause_score,
+            argMax(impact_score, version) AS impact_score,
+            argMax(burn_rate_5m, version) AS burn_rate_5m,
+            argMax(burn_rate_1h, version) AS burn_rate_1h,
+            argMax(burn_rate_6h, version) AS burn_rate_6h,
+            argMax(affected_services, version) AS affected_services,
+            argMax(critical_rate, version) AS critical_rate,
+            argMax(prod_weight, version) AS prod_weight,
+            argMax(evidence, version) AS evidence,
+            argMax(context_json, version) AS context_json,
+            argMax(created_at, version) AS created_at,
+            argMax(updated_at, version) AS updated_at
+        FROM incidents AS t
+        WHERE t.fingerprint = %(fingerprint)s
+          AND t.service = %(service)s
+          AND t.environment = %(environment)s
+          AND t.category = %(category)s
+        GROUP BY incident_id
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """
+    rows = query(
+        sql,
+        {
+            "fingerprint": fingerprint,
+            "service": service,
+            "environment": environment,
+            "category": category,
+        },
+        json_columns=(),
+    )
+    return rows[0] if rows else None
+
+
+def list_incidents(
+    *,
+    filters: Mapping[str, str | None],
+    limit: int,
+    offset: int,
+) -> list[dict[str, Any]]:
+    safe_limit = _safe_limit(limit)
+    safe_offset = max(offset, 0)
+
+    conditions = ["1=1"]
+    params: dict[str, Any] = {}
+
+    if filters.get("status"):
+        conditions.append("status = %(status)s")
+        params["status"] = filters["status"]
+    if filters.get("service"):
+        conditions.append("service = %(service)s")
+        params["service"] = filters["service"]
+    if filters.get("environment"):
+        conditions.append("environment = %(environment)s")
+        params["environment"] = filters["environment"]
+    if filters.get("category"):
+        conditions.append("category = %(category)s")
+        params["category"] = filters["category"]
+    if filters.get("severity"):
+        conditions.append("severity = %(severity)s")
+        params["severity"] = filters["severity"]
+    if filters.get("q"):
+        conditions.append(
+            "(positionCaseInsensitive(title, %(q)s) > 0 "
+            "OR positionCaseInsensitive(fingerprint, %(q)s) > 0)"
+        )
+        params["q"] = filters["q"]
+
+    where_sql = " AND ".join(conditions)
+
+    sql = f"""
+        SELECT *
+        FROM (
+            SELECT
+                incident_id,
+                max(version) AS max_version,
+                argMax(fingerprint, version) AS fingerprint,
+                argMax(title, version) AS title,
+                argMax(status, version) AS status,
+                argMax(service, version) AS service,
+                argMax(environment, version) AS environment,
+                argMax(category, version) AS category,
+                argMax(severity, version) AS severity,
+                argMax(opened_at, version) AS opened_at,
+                argMax(acknowledged_at, version) AS acknowledged_at,
+                argMax(mitigated_at, version) AS mitigated_at,
+                argMax(resolved_at, version) AS resolved_at,
+                argMax(last_seen_at, version) AS last_seen_at,
+                argMax(root_cause_service, version) AS root_cause_service,
+                argMax(root_cause_score, version) AS root_cause_score,
+                argMax(impact_score, version) AS impact_score,
+                argMax(burn_rate_5m, version) AS burn_rate_5m,
+                argMax(burn_rate_1h, version) AS burn_rate_1h,
+                argMax(burn_rate_6h, version) AS burn_rate_6h,
+                argMax(affected_services, version) AS affected_services,
+                argMax(critical_rate, version) AS critical_rate,
+                argMax(prod_weight, version) AS prod_weight,
+                argMax(evidence, version) AS evidence,
+                argMax(context_json, version) AS context_json,
+                argMax(created_at, version) AS created_at,
+                argMax(updated_at, version) AS updated_at
+            FROM incidents
+            GROUP BY incident_id
+        )
+        WHERE {where_sql}
+        ORDER BY updated_at DESC
+        LIMIT {safe_limit}
+        OFFSET {safe_offset}
+    """
+    return query(sql, params, json_columns=())
+
+
+def fetch_active_incidents(limit: int) -> list[dict[str, Any]]:
+    safe_limit = _safe_limit(limit)
+    statuses = ", ".join(_quote_sql(status) for status in ACTIVE_INCIDENT_STATUSES)
+    sql = f"""
+        SELECT *
+        FROM (
+            SELECT
+                incident_id,
+                max(version) AS max_version,
+                argMax(fingerprint, version) AS fingerprint,
+                argMax(title, version) AS title,
+                argMax(status, version) AS status,
+                argMax(service, version) AS service,
+                argMax(environment, version) AS environment,
+                argMax(category, version) AS category,
+                argMax(severity, version) AS severity,
+                argMax(opened_at, version) AS opened_at,
+                argMax(acknowledged_at, version) AS acknowledged_at,
+                argMax(mitigated_at, version) AS mitigated_at,
+                argMax(resolved_at, version) AS resolved_at,
+                argMax(last_seen_at, version) AS last_seen_at,
+                argMax(root_cause_service, version) AS root_cause_service,
+                argMax(root_cause_score, version) AS root_cause_score,
+                argMax(impact_score, version) AS impact_score,
+                argMax(burn_rate_5m, version) AS burn_rate_5m,
+                argMax(burn_rate_1h, version) AS burn_rate_1h,
+                argMax(burn_rate_6h, version) AS burn_rate_6h,
+                argMax(affected_services, version) AS affected_services,
+                argMax(critical_rate, version) AS critical_rate,
+                argMax(prod_weight, version) AS prod_weight,
+                argMax(evidence, version) AS evidence,
+                argMax(context_json, version) AS context_json,
+                argMax(created_at, version) AS created_at,
+                argMax(updated_at, version) AS updated_at
+            FROM incidents
+            GROUP BY incident_id
+        )
+        WHERE status IN ({statuses})
+        ORDER BY updated_at DESC
+        LIMIT {safe_limit}
+    """
+    return query(sql, json_columns=())
+
+
+def insert_incident_snapshots(rows: list[dict[str, Any]]) -> None:
+    columns = [
+        "incident_id",
+        "version",
+        "fingerprint",
+        "title",
+        "status",
+        "service",
+        "environment",
+        "category",
+        "severity",
+        "opened_at",
+        "acknowledged_at",
+        "mitigated_at",
+        "resolved_at",
+        "last_seen_at",
+        "root_cause_service",
+        "root_cause_score",
+        "impact_score",
+        "burn_rate_5m",
+        "burn_rate_1h",
+        "burn_rate_6h",
+        "affected_services",
+        "critical_rate",
+        "prod_weight",
+        "evidence",
+        "context_json",
+        "created_at",
+        "updated_at",
+    ]
+    _insert_rows("incidents", columns, rows)
+
+
+def insert_incident_events(rows: list[dict[str, Any]]) -> None:
+    columns = [
+        "event_id",
+        "incident_id",
+        "event_type",
+        "event_time",
+        "actor",
+        "payload",
+        "created_at",
+    ]
+    _insert_rows("incident_events", columns, rows)
+
+
+
+
+def fetch_incident_events(incident_id: str, limit: int) -> list[dict[str, Any]]:
+    safe_limit = _safe_limit(limit)
+    sql = f"""
+        SELECT event_id, incident_id, event_type, event_time, actor, payload, created_at
+        FROM incident_events
+        WHERE incident_id = %(incident_id)s
+        ORDER BY event_time DESC
+        LIMIT {safe_limit}
+    """
+    return query(sql, {"incident_id": incident_id}, json_columns=())
 
 
 
@@ -187,17 +464,5 @@ def fetch_pending_candidates(*, lookback_minutes: int, limit: int) -> list[dict[
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def parse_card_timestamp(card: Mapping[str, Any], field: str) -> datetime | None:
+    return parse_dt(card.get(field))

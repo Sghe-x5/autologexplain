@@ -29,6 +29,54 @@ _DDL_STATEMENTS: tuple[str, ...] = (
     PARTITION BY toDate(start_time)
     ORDER BY (candidate_id)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS incidents (
+        incident_id String,
+        version UInt64,
+        fingerprint String,
+        title String,
+        status LowCardinality(String),
+        service String,
+        environment String,
+        category LowCardinality(String),
+        severity LowCardinality(String),
+        opened_at DateTime,
+        acknowledged_at Nullable(DateTime),
+        mitigated_at Nullable(DateTime),
+        resolved_at Nullable(DateTime),
+        last_seen_at DateTime,
+        root_cause_service String,
+        root_cause_score Float64,
+        impact_score Float64,
+        burn_rate_5m Float64,
+        burn_rate_1h Float64,
+        burn_rate_6h Float64,
+        affected_services UInt32,
+        critical_rate Float64,
+        prod_weight Float64,
+        evidence Array(String),
+        context_json String,
+        created_at DateTime,
+        updated_at DateTime
+    )
+    ENGINE = ReplacingMergeTree(version)
+    PARTITION BY toDate(opened_at)
+    ORDER BY (incident_id, version)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS incident_events (
+        event_id String,
+        incident_id String,
+        event_type LowCardinality(String),
+        event_time DateTime,
+        actor String,
+        payload String,
+        created_at DateTime DEFAULT now()
+    )
+    ENGINE = MergeTree
+    PARTITION BY toDate(event_time)
+    ORDER BY (incident_id, event_time, event_id)
+    """,
 )
 
 
