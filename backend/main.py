@@ -9,6 +9,7 @@ from backend.api.chats import router as chats_router
 from backend.api.logs import router as logs_router
 from backend.api.ws import router as ws_router
 from backend.db.storage import init_store
+from backend.services.incidents import ensure_ready as ensure_incidents_ready
 from backend.services.signals import ensure_ready as ensure_signals_ready
 
 
@@ -16,6 +17,7 @@ from backend.services.signals import ensure_ready as ensure_signals_ready
 async def lifespan(app: FastAPI):
     init_store()
     ensure_signals_ready()
+    ensure_incidents_ready()
     yield
 
 
