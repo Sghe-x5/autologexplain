@@ -8,8 +8,8 @@ from uuid import uuid4
 
 from loguru import logger
 
-from backend.services.incidents.constants import DEFAULT_PROD_WEIGHT, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
-from backend.services.incidents.repository import fetch_recent_logs, upsert_candidates
+from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, DEFAULT_PROD_WEIGHT, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
+from backend.services.incidents.repository import fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, parse_card_timestamp, upsert_candidates
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
     make_deterministic_id,
@@ -68,6 +68,8 @@ def _normalize_card(card: Mapping[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _burn_triplet(service: str, environment: str) -> tuple[float, float, float]:
+    return (0.0, 0.0, 0.0)
 
 
 def _build_incident_title(service: str, category: str, severity: str) -> str:
@@ -237,10 +239,318 @@ def run_detector_cycle(
     }
 
 
+def _create_event(
+    *,
+    incident_id: str,
+    event_type: str,
+    actor: str,
+    event_time: datetime,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "event_id": make_deterministic_id("evt", incident_id, event_type, str(uuid4())),
+        "incident_id": incident_id,
+        "event_type": event_type,
+        "event_time": event_time,
+        "actor": actor,
+        "payload": safe_json_dumps(payload),
+        "created_at": event_time,
+    }
 
 
+def _build_snapshot(
+    *,
+    base: Mapping[str, Any] | None,
+    incident_id: str,
+    version: int,
+    fingerprint: str,
+    title: str,
+    status: str,
+    service: str,
+    environment: str,
+    category: str,
+    severity: str,
+    opened_at: datetime,
+    acknowledged_at: datetime | None,
+    mitigated_at: datetime | None,
+    resolved_at: datetime | None,
+    last_seen_at: datetime,
+    root_cause_service: str,
+    root_cause_score: float,
+    impact_score: float,
+    burn_rate_5m: float,
+    burn_rate_1h: float,
+    burn_rate_6h: float,
+    affected_services: int,
+    critical_rate: float,
+    prod_weight: float,
+    evidence: list[str],
+    context: dict[str, Any],
+    created_at: datetime,
+    updated_at: datetime,
+) -> dict[str, Any]:
+    _ = base
+    return {
+        "incident_id": incident_id,
+        "version": version,
+        "fingerprint": fingerprint,
+        "title": title,
+        "status": status,
+        "service": service,
+        "environment": environment,
+        "category": category,
+        "severity": severity,
+        "opened_at": opened_at,
+        "acknowledged_at": acknowledged_at,
+        "mitigated_at": mitigated_at,
+        "resolved_at": resolved_at,
+        "last_seen_at": last_seen_at,
+        "root_cause_service": root_cause_service,
+        "root_cause_score": root_cause_score,
+        "impact_score": impact_score,
+        "burn_rate_5m": burn_rate_5m,
+        "burn_rate_1h": burn_rate_1h,
+        "burn_rate_6h": burn_rate_6h,
+        "affected_services": max(int(affected_services), 1),
+        "critical_rate": max(critical_rate, 0.0),
+        "prod_weight": max(prod_weight, 0.0),
+        "evidence": evidence,
+        "context_json": safe_json_dumps(context),
+        "created_at": created_at,
+        "updated_at": updated_at,
+    }
 
 
+def run_correlator_cycle(
+    *,
+    lookback_minutes: int,
+    max_candidates: int,
+    merge_window_minutes: int,
+    reopen_window_minutes: int,
+) -> dict[str, int]:
+    ensure_ready()
+
+    candidates = fetch_pending_candidates(
+        lookback_minutes=lookback_minutes,
+        limit=max_candidates,
+    )
+    if not candidates:
+        return {"candidates": 0, "created": 0, "attached": 0, "reopened": 0}
+
+    now = utcnow()
+    created = 0
+    attached = 0
+    reopened = 0
+
+    snapshot_rows: list[dict[str, Any]] = []
+    event_rows: list[dict[str, Any]] = []
+    candidate_updates: list[dict[str, Any]] = []
+
+    for candidate in candidates:
+        candidate_id = _as_str(candidate.get("candidate_id"))
+        fingerprint = _as_str(candidate.get("fingerprint"))
+        service = _as_str(candidate.get("service"), "unknown")
+        environment = _as_str(candidate.get("environment"), "unknown")
+        category = _as_str(candidate.get("category"), "unknown")
+        severity = _as_str(candidate.get("severity"), "info")
+        normalized_message = _as_str(candidate.get("normalized_message"), "")
+        signal_count = int(candidate.get("signal_count") or 0)
+        anomaly_score = float(candidate.get("anomaly_score") or 0.0)
+        trace_ids = _as_list_str(candidate.get("trace_ids"))
+        source_signals = _as_list_str(candidate.get("source_signals"))
+
+        start_time = parse_dt(candidate.get("start_time")) or now
+        end_time = parse_dt(candidate.get("end_time")) or start_time
+
+        current = fetch_latest_incident_for_key(
+            fingerprint=fingerprint,
+            service=service,
+            environment=environment,
+            category=category,
+        )
+
+        incident_id: str
+        status = "open"
+        opened_at = start_time
+        acknowledged_at: datetime | None = None
+        mitigated_at: datetime | None = None
+        resolved_at: datetime | None = None
+        evidence = [candidate_id]
+        title = _build_incident_title(service, category, severity)
+        context = {
+            "normalized_message": normalized_message,
+            "last_candidate_id": candidate_id,
+            "last_signal_count": signal_count,
+        }
+        affected_services = 1
+        root_cause_service = service
+        root_cause_score = anomaly_score
+
+        reused = False
+        mark_reopened = False
+        created_at = now
+
+        if current is not None:
+            current_status = _as_str(current.get("status"), "open")
+            current_last_seen = parse_card_timestamp(current, "last_seen_at") or start_time
+            current_resolved = parse_card_timestamp(current, "resolved_at")
+
+            in_merge_window = (start_time - current_last_seen) <= timedelta(
+                minutes=max(merge_window_minutes, 1)
+            )
+            in_reopen_window = (
+                current_resolved is not None
+                and (start_time - current_resolved) <= timedelta(minutes=max(reopen_window_minutes, 1))
+            )
+
+            if current_status in ACTIVE_INCIDENT_STATUSES and in_merge_window:
+                reused = True
+            elif current_status == "resolved" and in_reopen_window:
+                reused = True
+                mark_reopened = True
+
+            if reused:
+                incident_id = _as_str(current.get("incident_id"))
+                status = "reopened" if mark_reopened else current_status
+                opened_at = parse_card_timestamp(current, "opened_at") or start_time
+                acknowledged_at = parse_card_timestamp(current, "acknowledged_at")
+                mitigated_at = parse_card_timestamp(current, "mitigated_at")
+                resolved_at = parse_card_timestamp(current, "resolved_at")
+                title = _as_str(current.get("title"), title)
+                evidence = _as_list_str(current.get("evidence"))
+                evidence.append(candidate_id)
+                evidence = evidence[-50:]
+                context = safe_json_loads(current.get("context_json"))
+                context.update(
+                    {
+                        "normalized_message": normalized_message,
+                        "last_candidate_id": candidate_id,
+                        "last_signal_count": signal_count,
+                    }
+                )
+                affected_services = max(int(current.get("affected_services") or 1), 1)
+                root_cause_service = _as_str(current.get("root_cause_service"), service)
+                root_cause_score = float(current.get("root_cause_score") or anomaly_score)
+                created_at = parse_card_timestamp(current, "created_at") or now
+
+        if not reused:
+            incident_id = str(uuid4())
+            created += 1
+            event_rows.append(
+                _create_event(
+                    incident_id=incident_id,
+                    event_type="opened",
+                    actor="correlator-worker",
+                    event_time=start_time,
+                    payload={
+                        "candidate_id": candidate_id,
+                        "fingerprint": fingerprint,
+                        "anomaly_score": anomaly_score,
+                    },
+                )
+            )
+
+        if reused:
+            attached += 1
+        if mark_reopened:
+            reopened += 1
+            event_rows.append(
+                _create_event(
+                    incident_id=incident_id,
+                    event_type="reopened",
+                    actor="correlator-worker",
+                    event_time=end_time,
+                    payload={"candidate_id": candidate_id},
+                )
+            )
+
+        burn_5m, burn_1h, burn_6h = _burn_triplet(service, environment)
+
+        critical_rate = _severity_rate(severity)
+        prod_weight = _prod_weight(environment)
+        impact_score = max(1, affected_services) * critical_rate * prod_weight
+
+        snapshot_rows.append(
+            _build_snapshot(
+                base=current,
+                incident_id=incident_id,
+                version=_next_version(end_time),
+                fingerprint=fingerprint,
+                title=title,
+                status=status,
+                service=service,
+                environment=environment,
+                category=category,
+                severity=severity,
+                opened_at=opened_at,
+                acknowledged_at=acknowledged_at,
+                mitigated_at=mitigated_at,
+                resolved_at=resolved_at,
+                last_seen_at=max(end_time, now),
+                root_cause_service=root_cause_service,
+                root_cause_score=root_cause_score,
+                impact_score=impact_score,
+                burn_rate_5m=burn_5m,
+                burn_rate_1h=burn_1h,
+                burn_rate_6h=burn_6h,
+                affected_services=affected_services,
+                critical_rate=critical_rate,
+                prod_weight=prod_weight,
+                evidence=evidence,
+                context=context,
+                created_at=created_at,
+                updated_at=now,
+            )
+        )
+
+        event_rows.append(
+            _create_event(
+                incident_id=incident_id,
+                event_type="candidate_attached",
+                actor="correlator-worker",
+                event_time=end_time,
+                payload={
+                    "candidate_id": candidate_id,
+                    "trace_ids": trace_ids,
+                    "source_signals": source_signals,
+                    "anomaly_score": anomaly_score,
+                },
+            )
+        )
+
+        candidate_updates.append(
+            {
+                "candidate_id": candidate_id,
+                "incident_id": incident_id,
+                "fingerprint": fingerprint,
+                "service": service,
+                "environment": environment,
+                "category": category,
+                "severity": severity,
+                "normalized_message": normalized_message,
+                "start_time": start_time,
+                "end_time": end_time,
+                "signal_count": signal_count,
+                "anomaly_score": anomaly_score,
+                "trace_ids": trace_ids,
+                "source_signals": source_signals,
+                "status": "correlated",
+                "created_at": parse_dt(candidate.get("created_at")) or now,
+                "updated_at": now,
+            }
+        )
+
+
+    insert_incident_snapshots(snapshot_rows)
+    insert_incident_events(event_rows)
+    upsert_candidates(candidate_updates)
+
+    return {
+        "candidates": len(candidates),
+        "created": created,
+        "attached": attached,
+        "reopened": reopened,
+    }
 
 
 
