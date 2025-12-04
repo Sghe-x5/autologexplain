@@ -8,8 +8,8 @@ from uuid import uuid4
 
 from loguru import logger
 
-from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, DEFAULT_PROD_WEIGHT, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
-from backend.services.incidents.repository import fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, parse_card_timestamp, upsert_candidates
+from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
+from backend.services.incidents.repository import fetch_incident_card, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, parse_card_timestamp, upsert_candidates
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
     make_deterministic_id,
@@ -21,7 +21,9 @@ from backend.services.incidents.utils import (
     safe_json_loads,
     utcnow,
 )
+from backend.services.log_fingerprints import make_fingerprint_observation
 from backend.services.log_tags import enrich_log_record
+from backend.services.signals import register_fingerprint_observations
 
 
 class IncidentNotFoundError(RuntimeError):
@@ -559,8 +561,174 @@ def run_correlator_cycle(
 
 
 
+def create_manual_incident(
+    *,
+    title: str,
+    service: str,
+    environment: str,
+    category: str,
+    severity: str,
+    message: str,
+    actor: str,
+) -> dict[str, Any]:
+    ensure_ready()
+
+    now = utcnow()
+    normalized_message = normalize_message(message or title)
+    fingerprint = make_fingerprint(normalized_message, service, category)
+    register_fingerprint_observations(
+        [
+            make_fingerprint_observation(
+                fingerprint=fingerprint,
+                service=service,
+                category=category,
+                message_template=normalized_message,
+                example_message=message or title,
+                observed_at=now,
+            )
+        ]
+    )
+
+    incident_id = str(uuid4())
+    critical_rate = _severity_rate(severity)
+    prod_weight = _prod_weight(environment)
+    impact_score = 1 * critical_rate * prod_weight
+    burn_5m, burn_1h, burn_6h = _burn_triplet(service, environment)
+
+    snapshot = _build_snapshot(
+        base=None,
+        incident_id=incident_id,
+        version=_next_version(now),
+        fingerprint=fingerprint,
+        title=title.strip() or _build_incident_title(service, category, severity),
+        status="open",
+        service=service,
+        environment=environment,
+        category=category,
+        severity=severity,
+        opened_at=now,
+        acknowledged_at=None,
+        mitigated_at=None,
+        resolved_at=None,
+        last_seen_at=now,
+        root_cause_service=service,
+        root_cause_score=0.0,
+        impact_score=impact_score,
+        burn_rate_5m=burn_5m,
+        burn_rate_1h=burn_1h,
+        burn_rate_6h=burn_6h,
+        affected_services=1,
+        critical_rate=critical_rate,
+        prod_weight=prod_weight,
+        evidence=[],
+        context={"manual": True, "normalized_message": normalized_message},
+        created_at=now,
+        updated_at=now,
+    )
+
+    event = _create_event(
+        incident_id=incident_id,
+        event_type="opened",
+        actor=actor,
+        event_time=now,
+        payload={"manual": True, "message": message},
+    )
+
+    insert_incident_snapshots([snapshot])
+    insert_incident_events([event])
 
 
+    card = get_incident(incident_id)
+    if card is None:
+        raise IncidentNotFoundError(incident_id)
+    return card
+
+
+def update_incident_status(
+    *,
+    incident_id: str,
+    next_status: str,
+    actor: str,
+    note: str | None,
+) -> dict[str, Any]:
+    ensure_ready()
+
+    if next_status not in INCIDENT_STATUSES:
+        raise InvalidStatusTransitionError(f"Unknown status: {next_status}")
+
+    current = fetch_incident_card(incident_id)
+    if current is None:
+        raise IncidentNotFoundError(incident_id)
+
+    current_status = _as_str(current.get("status"), "open")
+    allowed = ALLOWED_TRANSITIONS.get(current_status, ())
+    if next_status not in allowed:
+        raise InvalidStatusTransitionError(f"Transition {current_status} -> {next_status} is not allowed")
+
+    now = utcnow()
+
+    acknowledged_at = parse_card_timestamp(current, "acknowledged_at")
+    mitigated_at = parse_card_timestamp(current, "mitigated_at")
+    resolved_at = parse_card_timestamp(current, "resolved_at")
+
+    if next_status == "acknowledged":
+        acknowledged_at = now
+    elif next_status == "mitigated":
+        mitigated_at = now
+    elif next_status == "resolved":
+        resolved_at = now
+
+    context = safe_json_loads(current.get("context_json"))
+    if note:
+        context["last_status_note"] = note
+
+    snapshot = _build_snapshot(
+        base=current,
+        incident_id=incident_id,
+        version=_next_version(now),
+        fingerprint=_as_str(current.get("fingerprint")),
+        title=_as_str(current.get("title"), "incident"),
+        status=next_status,
+        service=_as_str(current.get("service"), "unknown"),
+        environment=_as_str(current.get("environment"), "unknown"),
+        category=_as_str(current.get("category"), "unknown"),
+        severity=_as_str(current.get("severity"), "info"),
+        opened_at=parse_card_timestamp(current, "opened_at") or now,
+        acknowledged_at=acknowledged_at,
+        mitigated_at=mitigated_at,
+        resolved_at=resolved_at,
+        last_seen_at=max(parse_card_timestamp(current, "last_seen_at") or now, now),
+        root_cause_service=_as_str(current.get("root_cause_service"), "unknown"),
+        root_cause_score=float(current.get("root_cause_score") or 0.0),
+        impact_score=float(current.get("impact_score") or 0.0),
+        burn_rate_5m=float(current.get("burn_rate_5m") or 0.0),
+        burn_rate_1h=float(current.get("burn_rate_1h") or 0.0),
+        burn_rate_6h=float(current.get("burn_rate_6h") or 0.0),
+        affected_services=int(current.get("affected_services") or 1),
+        critical_rate=float(current.get("critical_rate") or 0.0),
+        prod_weight=float(current.get("prod_weight") or _prod_weight(current.get("environment"))),
+        evidence=_as_list_str(current.get("evidence")),
+        context=context,
+        created_at=parse_card_timestamp(current, "created_at") or now,
+        updated_at=now,
+    )
+
+    event = _create_event(
+        incident_id=incident_id,
+        event_type=next_status,
+        actor=actor,
+        event_time=now,
+        payload={"note": note or ""},
+    )
+
+    insert_incident_snapshots([snapshot])
+    insert_incident_events([event])
+
+
+    card = get_incident(incident_id)
+    if card is None:
+        raise IncidentNotFoundError(incident_id)
+    return card
 
 
 
