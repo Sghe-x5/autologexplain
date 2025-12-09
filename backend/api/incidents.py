@@ -5,7 +5,8 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from backend.services.incidents import IncidentNotFoundError, InvalidStatusTransitionError, create_manual_incident, update_incident_status
+from backend.services.incidents import IncidentNotFoundError, InvalidStatusTransitionError, create_manual_incident, get_evidence, get_incident, get_incidents, get_timeline, update_incident_status
+from backend.services.incidents.constants import INCIDENT_STATUSES
 
 router = APIRouter()
 
@@ -26,8 +27,44 @@ class UpdateIncidentStatusRequest(BaseModel):
     note: str | None = Field(default=None, max_length=1000)
 
 
+@router.get("")
+def list_incidents(
+    *,
+    incident_status: str | None = Query(
+        None,
+        alias="status",
+        description=f"Allowed: {', '.join(INCIDENT_STATUSES)}",
+    ),
+    service: str | None = None,
+    environment: str | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    q: str | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    if incident_status and incident_status not in INCIDENT_STATUSES:
+        raise HTTPException(status_code=422, detail=f"unknown_status:{incident_status}")
+
+    items = get_incidents(
+        status=incident_status,
+        service=service,
+        environment=environment,
+        category=category,
+        severity=severity,
+        q=q,
+        limit=limit,
+        offset=offset,
+    )
+    return {"items": items, "count": len(items)}
 
 
+@router.get("/{incident_id}")
+def get_incident_card(incident_id: str):
+    card = get_incident(incident_id)
+    if card is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found")
+    return card
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -63,8 +100,28 @@ def patch_incident_status(incident_id: str, payload: UpdateIncidentStatusRequest
         raise HTTPException(status_code=500, detail="failed_to_update_status") from exc
 
 
+@router.get("/{incident_id}/timeline")
+def incident_timeline(incident_id: str, limit: int = Query(100, ge=1, le=500)):
+    try:
+        timeline = get_timeline(incident_id, limit=limit)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="failed_to_fetch_timeline") from exc
+
+    if not timeline:
+        card = get_incident(incident_id)
+        if card is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found")
+    return {"incident_id": incident_id, "events": timeline}
 
 
+@router.get("/{incident_id}/evidence")
+def incident_evidence(incident_id: str, limit: int = Query(200, ge=1, le=500)):
+    try:
+        return get_evidence(incident_id, limit=limit)
+    except IncidentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="failed_to_fetch_evidence") from exc
 
 
 

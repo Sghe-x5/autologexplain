@@ -9,7 +9,7 @@ from uuid import uuid4
 from loguru import logger
 
 from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
-from backend.services.incidents.repository import fetch_incident_card, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, parse_card_timestamp, upsert_candidates
+from backend.services.incidents.repository import fetch_incident_card, fetch_incident_events, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, list_incidents, parse_card_timestamp, upsert_candidates
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
     make_deterministic_id,
@@ -557,8 +557,39 @@ def run_correlator_cycle(
 
 
 
+def get_incident(incident_id: str) -> dict[str, Any] | None:
+    card = fetch_incident_card(incident_id)
+    if card is None:
+        return None
+
+    response = _serialize_for_response(card)
+    return response
 
 
+def get_incidents(
+    *,
+    status: str | None,
+    service: str | None,
+    environment: str | None,
+    category: str | None,
+    severity: str | None,
+    q: str | None,
+    limit: int,
+    offset: int,
+) -> list[dict[str, Any]]:
+    rows = list_incidents(
+        filters={
+            "status": status,
+            "service": service,
+            "environment": environment,
+            "category": category,
+            "severity": severity,
+            "q": q,
+        },
+        limit=limit,
+        offset=offset,
+    )
+    return [_serialize_for_response(row) for row in rows]
 
 
 def create_manual_incident(
@@ -733,8 +764,51 @@ def update_incident_status(
 
 
 
+def get_timeline(incident_id: str, limit: int) -> list[dict[str, Any]]:
+    rows = fetch_incident_events(incident_id, limit)
+    timeline: list[dict[str, Any]] = []
+    for row in rows:
+        payload = safe_json_loads(row.get("payload"))
+        event_time = parse_dt(row.get("event_time"))
+        timeline.append(
+            {
+                "event_id": _as_str(row.get("event_id")),
+                "incident_id": _as_str(row.get("incident_id")),
+                "event_type": _as_str(row.get("event_type")),
+                "event_time": event_time.isoformat() if event_time else None,
+                "actor": _as_str(row.get("actor")),
+                "payload": payload,
+            }
+        )
+    return timeline
 
 
+def get_evidence(incident_id: str, limit: int) -> dict[str, Any]:
+    card = get_incident(incident_id)
+    if card is None:
+        raise IncidentNotFoundError(incident_id)
+
+    rows = fetch_incident_events(incident_id, limit)
+    evidence_items: list[dict[str, Any]] = []
+    for row in rows:
+        if _as_str(row.get("event_type")) != "candidate_attached":
+            continue
+        payload = safe_json_loads(row.get("payload"))
+        if not payload:
+            continue
+        evidence_items.append(
+            {
+                "event_id": _as_str(row.get("event_id")),
+                "event_time": (parse_dt(row.get("event_time")) or utcnow()).isoformat(),
+                "payload": payload,
+            }
+        )
+
+    return {
+        "incident_id": incident_id,
+        "evidence": card.get("evidence", []),
+        "candidate_evidence": evidence_items,
+    }
 
 
 def log_cycle_result(worker_name: str, result: Mapping[str, Any]) -> None:
