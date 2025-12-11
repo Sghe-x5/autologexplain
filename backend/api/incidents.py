@@ -5,7 +5,17 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from backend.services.incidents import IncidentNotFoundError, InvalidStatusTransitionError, create_manual_incident, get_evidence, get_incident, get_incidents, get_timeline, update_incident_status
+from backend.services.incidents import (
+    IncidentNotFoundError,
+    InvalidStatusTransitionError,
+    create_manual_incident,
+    delete_incident as delete_incident_service,
+    get_evidence,
+    get_incident,
+    get_incidents,
+    get_timeline,
+    update_incident_status,
+)
 from backend.services.incidents.constants import INCIDENT_STATUSES
 
 router = APIRouter()
@@ -128,3 +138,11 @@ def incident_evidence(incident_id: str, limit: int = Query(200, ge=1, le=500)):
 
 
 
+@router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_incident_endpoint(incident_id: str):
+    try:
+        delete_incident_service(incident_id)
+    except IncidentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="failed_to_delete_incident") from exc

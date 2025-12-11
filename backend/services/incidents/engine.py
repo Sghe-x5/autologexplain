@@ -9,7 +9,7 @@ from uuid import uuid4
 from loguru import logger
 
 from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
-from backend.services.incidents.repository import fetch_incident_card, fetch_incident_events, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, list_incidents, parse_card_timestamp, upsert_candidates
+from backend.services.incidents.repository import delete_incident_records, fetch_incident_card, fetch_incident_events, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, list_incidents, parse_card_timestamp, upsert_candidates
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
     make_deterministic_id,
@@ -761,6 +761,15 @@ def update_incident_status(
         raise IncidentNotFoundError(incident_id)
     return card
 
+
+def delete_incident(incident_id: str) -> None:
+    ensure_ready()
+
+    current = fetch_incident_card(incident_id)
+    if current is None:
+        raise IncidentNotFoundError(incident_id)
+
+    delete_incident_records(incident_id)
 
 
 
