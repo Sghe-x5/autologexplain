@@ -60,7 +60,24 @@ def incident_cache_key(incident_id: str) -> str:
     return f"{REDIS_CARD_CACHE_PREFIX}{incident_id}"
 
 
+def get_cached_incident(incident_id: str) -> dict[str, Any] | None:
+    raw = redis_client().get(incident_cache_key(incident_id))
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
+def cache_incident_card(incident_id: str, card: dict[str, Any]) -> None:
+    redis_client().setex(
+        incident_cache_key(incident_id),
+        REDIS_CARD_CACHE_TTL_SECONDS,
+        json.dumps(card, ensure_ascii=False, separators=(",", ":")),
+    )
 
 
+def invalidate_incident_cache(incident_id: str) -> None:
+    redis_client().delete(incident_cache_key(incident_id))

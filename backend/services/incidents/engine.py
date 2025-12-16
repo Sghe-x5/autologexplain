@@ -9,6 +9,11 @@ from uuid import uuid4
 from loguru import logger
 
 from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
+from backend.services.incidents.redis_cache import (
+    cache_incident_card,
+    get_cached_incident,
+    invalidate_incident_cache,
+)
 from backend.services.incidents.repository import delete_incident_records, fetch_incident_card, fetch_incident_events, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, list_incidents, parse_card_timestamp, upsert_candidates
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
@@ -542,6 +547,7 @@ def run_correlator_cycle(
             }
         )
 
+        invalidate_incident_cache(incident_id)
 
     insert_incident_snapshots(snapshot_rows)
     insert_incident_events(event_rows)
@@ -558,11 +564,16 @@ def run_correlator_cycle(
 
 
 def get_incident(incident_id: str) -> dict[str, Any] | None:
+    cached = get_cached_incident(incident_id)
+    if cached:
+        return cached
+
     card = fetch_incident_card(incident_id)
     if card is None:
         return None
 
     response = _serialize_for_response(card)
+    cache_incident_card(incident_id, response)
     return response
 
 
@@ -667,7 +678,7 @@ def create_manual_incident(
 
     insert_incident_snapshots([snapshot])
     insert_incident_events([event])
-
+    invalidate_incident_cache(incident_id)
 
     card = get_incident(incident_id)
     if card is None:
@@ -754,7 +765,7 @@ def update_incident_status(
 
     insert_incident_snapshots([snapshot])
     insert_incident_events([event])
-
+    invalidate_incident_cache(incident_id)
 
     card = get_incident(incident_id)
     if card is None:
@@ -770,7 +781,7 @@ def delete_incident(incident_id: str) -> None:
         raise IncidentNotFoundError(incident_id)
 
     delete_incident_records(incident_id)
-
+    invalidate_incident_cache(incident_id)
 
 
 def get_timeline(incident_id: str, limit: int) -> list[dict[str, Any]]:
