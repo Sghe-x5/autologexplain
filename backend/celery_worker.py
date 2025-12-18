@@ -9,6 +9,8 @@ from loguru import logger
 from backend.core.config import get_settings
 from backend.db.storage import add_message
 from backend.services.incidents import log_cycle_result
+from backend.services.incidents import run_correlator_cycle as run_correlator_cycle_engine
+from backend.services.incidents import run_detector_cycle as run_detector_cycle_engine
 from backend.services.incidents.redis_cache import distributed_lock
 from backend.services.llm_service import ask_llm
 from backend.services.signals import (
@@ -43,6 +45,14 @@ celery_app.conf.update(
         "signals-anomaly-detector-worker": {
             "task": "signals.anomaly_detector_worker",
             "schedule": max(60, int(s.ANOMALY_DETECTOR_INTERVAL_MINUTES) * 60),
+        },
+        "incident-detector-worker": {
+            "task": "incident.detector_worker",
+            "schedule": max(60, int(s.INCIDENT_DETECTOR_INTERVAL_MINUTES) * 60),
+        },
+        "incident-correlator-worker": {
+            "task": "incident.correlator_worker",
+            "schedule": max(60, int(s.INCIDENT_CORRELATOR_INTERVAL_MINUTES) * 60),
         },
     },
 )
@@ -172,6 +182,22 @@ def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str) -> None:
         raise
 
 
+@celery_app.task(name="incident.detector_worker")
+def run_incident_detector() -> None:
+    with distributed_lock(
+        "detector-worker",
+        ttl_seconds=max(int(s.INCIDENT_JOB_LOCK_TTL_SECONDS), 30),
+    ) as acquired:
+        if not acquired:
+            logger.info("incident.detector_worker skipped: lock is already held")
+            return
+        result = run_detector_cycle_engine(
+            lookback_minutes=int(s.INCIDENT_DETECTOR_LOOKBACK_MINUTES),
+            max_logs=int(s.INCIDENT_DETECTOR_MAX_LOGS),
+            anomaly_threshold=float(s.INCIDENT_ANOMALY_THRESHOLD),
+            slo_target=float(s.INCIDENT_SLO_TARGET),
+        )
+        log_cycle_result("detector-worker", result)
 
 
 @celery_app.task(name="signals.signalization_worker")
@@ -215,5 +241,21 @@ def run_anomaly_detector_worker() -> None:
         log_cycle_result("anomaly-detector-worker", result)
 
 
+@celery_app.task(name="incident.correlator_worker")
+def run_incident_correlator() -> None:
+    with distributed_lock(
+        "correlator-worker",
+        ttl_seconds=max(int(s.INCIDENT_JOB_LOCK_TTL_SECONDS), 30),
+    ) as acquired:
+        if not acquired:
+            logger.info("incident.correlator_worker skipped: lock is already held")
+            return
+        result = run_correlator_cycle_engine(
+            lookback_minutes=int(s.INCIDENT_CORRELATOR_LOOKBACK_MINUTES),
+            max_candidates=int(s.INCIDENT_CORRELATOR_MAX_CANDIDATES),
+            merge_window_minutes=int(s.INCIDENT_CORRELATION_WINDOW_MINUTES),
+            reopen_window_minutes=int(s.INCIDENT_REOPEN_WINDOW_MINUTES),
+        )
+        log_cycle_result("correlator-worker", result)
 
 
