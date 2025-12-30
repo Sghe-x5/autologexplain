@@ -35,6 +35,8 @@ from pydantic import BaseModel
 from backend.core.config import get_settings
 from backend.db.db import query as ch_query
 from backend.services.dependency_graph import build_graph_from_traces
+from backend.services.log_tags import enrich_log_record
+from backend.services.slo_tracker import compute_all_services_slo
 
 router = APIRouter(prefix="/rca", tags=["rca"])
 
@@ -66,6 +68,37 @@ _RCA_TTL   = 60 * 60 * 24 * 30   # 30 days
 
 
 
+@router.get("/slo")
+def slo_status(
+    hours: int = Query(default=24, ge=1, le=168, description="Look-back window"),
+):
+    """
+    Compute and return SLO burn rates for all services seen in recent logs.
+
+    Returns services sorted by alert severity (page first).
+    """
+    s = get_settings()
+    sql = f"""
+        SELECT timestamp, service, level, status_code, metadata
+        FROM {s.CLICKHOUSE_TABLE}
+        WHERE timestamp >= now() - INTERVAL {hours} HOUR
+        ORDER BY timestamp DESC
+        LIMIT 10000
+    """
+    try:
+        rows = ch_query(sql, {})
+    except Exception as exc:
+        logger.exception("rca slo: clickhouse error")
+        raise HTTPException(status_code=500, detail="failed_to_fetch_logs") from exc
+
+    enriched     = [enrich_log_record(r) for r in rows]
+    slo_statuses = compute_all_services_slo(enriched)
+
+    return {
+        "services": [s.to_dict() for s in slo_statuses],
+        "count":    len(slo_statuses),
+        "hours":    hours,
+    }
 
 
 @router.get("/graph")
