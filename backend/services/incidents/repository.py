@@ -470,8 +470,40 @@ def fetch_incident_events(incident_id: str, limit: int) -> list[dict[str, Any]]:
     return query(sql, {"incident_id": incident_id}, json_columns=())
 
 
+def fetch_latest_burn_rates(service: str, environment: str) -> dict[str, float]:
+    sql = """
+        SELECT
+            window_size,
+            argMax(error_budget_consumption, created_at) AS burn
+        FROM slo_burn
+        WHERE service = %(service)s
+          AND environment = %(environment)s
+        GROUP BY window_size
+    """
+    rows = query(sql, {"service": service, "environment": environment})
+    out: dict[str, float] = {}
+    for row in rows:
+        window_size = str(row.get("window_size") or "")
+        burn = float(row.get("burn") or 0.0)
+        if window_size:
+            out[window_size] = burn
+    return out
 
 
+def insert_slo_burn(rows: list[dict[str, Any]]) -> None:
+    columns = [
+        "burn_id",
+        "window_start",
+        "window_size",
+        "service",
+        "environment",
+        "error_count",
+        "total_count",
+        "error_ratio",
+        "error_budget_consumption",
+        "created_at",
+    ]
+    _insert_rows("slo_burn", columns, rows)
 
 
 

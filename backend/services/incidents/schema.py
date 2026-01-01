@@ -77,6 +77,23 @@ _DDL_STATEMENTS: tuple[str, ...] = (
     PARTITION BY toDate(event_time)
     ORDER BY (incident_id, event_time, event_id)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS slo_burn (
+        burn_id String,
+        window_start DateTime,
+        window_size LowCardinality(String),
+        service String,
+        environment String,
+        error_count UInt64,
+        total_count UInt64,
+        error_ratio Float64,
+        error_budget_consumption Float64,
+        created_at DateTime
+    )
+    ENGINE = ReplacingMergeTree(created_at)
+    PARTITION BY toDate(window_start)
+    ORDER BY (service, environment, window_size, window_start, burn_id)
+    """,
 )
 
 

@@ -8,13 +8,13 @@ from uuid import uuid4
 
 from loguru import logger
 
-from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE
+from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE, SLO_WINDOWS
 from backend.services.incidents.redis_cache import (
     cache_incident_card,
     get_cached_incident,
     invalidate_incident_cache,
 )
-from backend.services.incidents.repository import delete_incident_records, fetch_incident_card, fetch_incident_events, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, list_incidents, parse_card_timestamp, upsert_candidates
+from backend.services.incidents.repository import delete_incident_records, fetch_incident_card, fetch_incident_events, fetch_latest_burn_rates, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, insert_slo_burn, list_incidents, parse_card_timestamp, upsert_candidates
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
     make_deterministic_id,
@@ -76,7 +76,12 @@ def _normalize_card(card: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _burn_triplet(service: str, environment: str) -> tuple[float, float, float]:
-    return (0.0, 0.0, 0.0)
+    rates = fetch_latest_burn_rates(service, environment)
+    return (
+        float(rates.get("5m", 0.0)),
+        float(rates.get("1h", 0.0)),
+        float(rates.get("6h", 0.0)),
+    )
 
 
 def _build_incident_title(service: str, category: str, severity: str) -> str:
@@ -237,6 +242,45 @@ def run_detector_cycle(
     upsert_candidates(candidate_rows)
 
     burn_rows: list[dict[str, Any]] = []
+    budget = max(1e-6, 1.0 - slo_target)
+
+    for (service, environment), samples in per_service_logs.items():
+        for window_name, window_minutes in SLO_WINDOWS:
+            window_start = now - timedelta(minutes=window_minutes)
+            total = 0
+            errors = 0
+            for ts, severity in samples:
+                if ts < window_start:
+                    continue
+                total += 1
+                if severity in ("error", "critical"):
+                    errors += 1
+
+            ratio = (errors / total) if total else 0.0
+            burn = ratio / budget
+            burn_rows.append(
+                {
+                    "burn_id": make_deterministic_id(
+                        "burn",
+                        service,
+                        environment,
+                        window_name,
+                        window_start.replace(second=0, microsecond=0).isoformat(),
+                    ),
+                    "window_start": window_start.replace(second=0, microsecond=0),
+                    "window_size": window_name,
+                    "service": service,
+                    "environment": environment,
+                    "error_count": int(errors),
+                    "total_count": int(total),
+                    "error_ratio": ratio,
+                    "error_budget_consumption": burn,
+                    "created_at": now,
+                }
+            )
+
+    insert_slo_burn(burn_rows)
+
     return {
         "logs": len(rows),
         "signals": len(signal_rows),
