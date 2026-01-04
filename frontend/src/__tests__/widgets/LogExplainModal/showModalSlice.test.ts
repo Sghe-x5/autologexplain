@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import showModal, { close, open } from "./showModalSlice";
+import showModal, {
+  close,
+  open,
+} from "../../../widgets/LogExplainModal/model/showModalSlice";
 
 describe("showModalSlice", () => {
   it("should handle initial state", () => {
