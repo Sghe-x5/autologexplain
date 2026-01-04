@@ -1,5 +1,4 @@
 import { FILTER_URL } from "@/consts/api.const";
-import { FILTERS_MOCK } from "@/mocks/filter.mock";
 
 export type FilterData = {
   product: string;
@@ -9,7 +8,7 @@ export type FilterData = {
   }[];
 };
 
-function validateFilters(data: unknown): asserts data is FilterData[] {
+export function validateFilters(data: unknown): asserts data is FilterData[] {
   if (!Array.isArray(data)) {
     throw new Error("Filters must be an array");
   }
@@ -41,7 +40,9 @@ function validateFilters(data: unknown): asserts data is FilterData[] {
 export const GetFilters = async (): Promise<FilterData[]> => {
   const fetchedData = await fetch(FILTER_URL || "", { method: "GET" })
     .then((res) => res.json())
-    .catch(() => FILTERS_MOCK);
+    .catch(() => ({
+      message: "rejected promise", // Заменить в проде
+    }));
 
   validateFilters(fetchedData);
 
