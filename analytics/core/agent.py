@@ -13,7 +13,7 @@ from analytics.utils.config import (
     SYSTEM_PROMT,
     YC_API_KEY,
     YC_FOLDER_ID,
-    YC_IAM_TOKEN,
+    token_manager 
 )
 
 
@@ -24,10 +24,10 @@ def create_log_agent() -> AgentExecutor:
         trace_retriever,
         python_code_interpreter,
     ]
-
-    if YC_IAM_TOKEN:
+    yc_iam_token = token_manager.get_token()
+    if yc_iam_token:
         llm = ChatYandexGPT(
-            iam_token=SecretStr(YC_IAM_TOKEN),
+            iam_token=SecretStr(yc_iam_token),
             folder_id=YC_FOLDER_ID or "",
             model_name=LLM_MODEL_NAME,
             temperature=0.0,
@@ -42,7 +42,7 @@ def create_log_agent() -> AgentExecutor:
             max_tokens=4096,
         )
     else:
-        raise ValueError("Не найдены ни YC_IAM_TOKEN, ни YC_API_KEY в файле .env")
+        raise ValueError("Не найдены YC_API_KEY в файле .env и не получен YC_IAM_TOKEN")
 
     system_prompt = SYSTEM_PROMT
 
