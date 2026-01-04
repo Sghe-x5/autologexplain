@@ -2,10 +2,6 @@ import { LogExplainForm } from "../components/Form";
 import { Separator } from "@/components/ui/separator";
 import { ChatWithAI } from "@/widgets/LogExplainModal/components/ChatWithAI";
 import { Bot, RotateCcw, X } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { type AppDispatch } from "@/lib/store";
-import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
-import { useLogStore } from "../model/store";
 import Button from "@/components/ui/button/button";
 import { type FilterData } from "@/api/getFilters";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,24 +9,33 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export const LogExplainUI = ({
   filters,
   isFiltersLoaded,
+  isAnalysisActive,
+  analysisParams,
+  onClose,
+  onReset,
+  ...restProps
 }: {
   filters: FilterData[];
   isFiltersLoaded: boolean;
-}) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const hasLog = useLogStore((state) => state.log) !== null;
-  const analysisParams = useLogStore((state) => state.analysisParams);
-
-  const resetLog = useLogStore((state) => state.reset);
-
-  const onReset = () => {
-    resetLog();
-  };
-
+  isAnalysisActive: boolean;
+  analysisParams?: {
+    filters: {
+      start_date: string;
+      end_date: string;
+      service: string;
+      product?: string;
+      environment?: string;
+    };
+    prompt: string;
+  } | null;
+  onClose: () => void;
+  onReset: () => void;
+} & Record<string, unknown>) => {
   return (
     <div
       className="flex flex-col flex-1 h-screen p-5 z-50 bg-white"
       data-test-id="log-explain-modal"
+      {...restProps}
     >
       <div className="flex justify-between" data-test-id="log-explain-header">
         <div className="flex gap-3 items-center" data-test-id="header-left">
@@ -51,7 +56,7 @@ export const LogExplainUI = ({
               className="text-[#64748b] font-[400] text-[16px]"
               data-test-id="assistant-description"
             >
-              {hasLog
+              {isAnalysisActive
                 ? "Результаты анализа логов по заданным параметрам"
                 : "Задайте параметры для анализа логов"}
             </p>
@@ -59,14 +64,14 @@ export const LogExplainUI = ({
         </div>
         <button
           className="p-4 w-fit h-fit bg-none"
-          onClick={() => dispatch(close())}
+          onClick={onClose}
           data-test-id="close-modal-button"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      {hasLog && (
+      {isAnalysisActive && (
         <Button
           type="button"
           className="w-full mt-4 h-11 border"
@@ -85,7 +90,7 @@ export const LogExplainUI = ({
         </>
       ) : (
         <>
-          {!hasLog && (
+          {!isAnalysisActive && (
             <div className="flex-1 overflow-hidden">
               <ScrollArea
                 className="h-full w-full pr-4 [&_[data-slot=scroll-area-scrollbar]]:w-2"
@@ -95,7 +100,7 @@ export const LogExplainUI = ({
               </ScrollArea>
             </div>
           )}
-          {hasLog && (
+          {isAnalysisActive && (
             <div
               className="flex-1 w-full min-h-0"
               data-test-id="chat-with-ai-section"
