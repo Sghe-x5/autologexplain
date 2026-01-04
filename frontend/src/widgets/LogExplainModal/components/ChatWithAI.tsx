@@ -1,48 +1,87 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  useNewChatMutation,
+  useStreamChatQuery,
+  useChatTurnMutation,
+} from "../model/WebSocket/chat.api";
+import { WS_BASE } from "../model/WebSocket/consts";
 
 export const ChatWithAI = () => {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: `Вот интерпретация действий пользователя с user_001:\n\nРассматриваемый период: не указан\nСервис: не выбран\nКоличество визитов: 1\nОбщая продолжительность сессии: 1806 секунд (примерно 30 минут)\nПокупки: Пользователь не совершал покупок (0.00 продаж)\nВозвраты: 1 возврат на сумму 1800.51\n\nВывод: Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.`,
-    },
-    {
-      role: "user",
-      content: "Как исправить эту ошибку?",
-    },
-    {
-      role: "assistant",
-      content: "Анализирую...",
-    },
-  ]);
+  const [messages, setMessages] = useState<
+    { id: string; role: "user" | "assistant"; text: string }[]
+  >([]);
 
   const [input, setInput] = useState("");
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
-    setInput("");
+  const [newChat] = useNewChatMutation();
+  const [chatTurn] = useChatTurnMutation();
 
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Ответ от ИИ..." },
-      ]);
-    }, 1000);
+  const [chat, setChat] = useState<{ chatId: string; token: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    (async () => {
+      const res = await newChat().unwrap();
+      setChat({ chatId: res.chat_id, token: res.token });
+    })();
+  }, [newChat]);
+
+  const streamParams = useMemo(
+    () =>
+      chat ? { chatId: chat.chatId, token: chat.token, wsUrl: WS_BASE } : null,
+    [chat]
+  );
+
+  const { data } = useStreamChatQuery(streamParams!, { skip: !chat });
+
+  useEffect(() => {
+    if (data?.items?.length) {
+      setMessages((prev) => {
+        // Добавляем только новые сообщения, которых еще нет в prev по id
+        const existingIds = new Set(prev.map((m) => m.id)); // выделяй id
+        const newMessages = data.items
+          .filter((m) => !existingIds.has(m.id))
+          .map((m) => ({
+            ...m,
+            text: m.text
+              .replace(/^```json\n/, "")
+              .replace(/\n```$/, "")
+              .replace(/Запрос: .*/, ""),
+          }));
+
+        return [...prev, ...newMessages];
+      });
+    }
+  }, [data]);
+
+  const sendMessage = async () => {
+    if (!chat || !input.trim()) return;
+    await chatTurn({
+      chatId: chat.chatId,
+      content: input.trim(),
+    });
+    setInput("");
+    setMessages([
+      ...messages,
+      { id: crypto.randomUUID(), role: "user", text: input.trim() },
+    ]);
   };
 
   return (
-    <div className="w-full h-screen flex flex-col">
+    <div className="w-full max-h-full h-full flex flex-col">
       <div className="flex items-center gap-2 p-3 text-[#2463EB]">
         <Bot />
         <span className="font-semibold">Ответ AI ассистента</span>
       </div>
-      <div className="flex-1 py-2">
-        <div className="space-y-4">
-          {messages.map((msg, idx) => (
+      <ScrollArea className="h-full py-2 px-2">
+        {messages.length > 0 &&
+          messages.map((msg, idx) => (
             <div
               key={idx}
               className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
@@ -51,12 +90,10 @@ export const ChatWithAI = () => {
                   : "bg-none text-gray-900"
               }`}
             >
-              {msg.content}
+              {msg.text}
             </div>
           ))}
-          <div className="w-full h-7"></div>
-        </div>
-      </div>
+      </ScrollArea>
       <div className="flex gap-2 p-2 border-t bg-white sticky bottom-0">
         <Input
           placeholder="Задать вопрос или уточнение..."
