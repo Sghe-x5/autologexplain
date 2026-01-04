@@ -11,7 +11,7 @@ from backend.services.tokens import issue_chat_token
 router = APIRouter()
 
 
-@router.post("/new", status_code=status.HTTP_201_CREATED)
+@router.post("/new", status_code=status.HTTP_200_OK)
 def create_chat_anonymous():
     """
     Создаёт анонимный чат. Возвращает chat_id и подписанный token.
