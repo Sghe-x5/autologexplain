@@ -21,7 +21,8 @@ import {
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import { Calendar, CloudLightningIcon, User } from "lucide-react";
+import { Calendar, Zap, User } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   service: z.string().nonempty("Выберите сервис"),
@@ -57,12 +58,12 @@ const LogExplainForm = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                <CloudLightningIcon />
+                <Zap />
                 Выберите сервис
               </FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Выберите сервис для анализа" />
                   </SelectTrigger>
                 </FormControl>
@@ -101,7 +102,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время начала</FormLabel>
                   <FormControl>
-                    <DatePicker label={""}/>
+                    <DatePicker label={""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,7 +115,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время окончания</FormLabel>
                   <FormControl>
-                    <DatePicker  label={""}/>
+                    <DatePicker label={""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -141,6 +142,8 @@ const LogExplainForm = () => {
             </FormItem>
           )}
         />
+
+        <Separator />
 
         <div className="flex  gap-2">
           <Button
