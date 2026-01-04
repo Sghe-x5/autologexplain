@@ -1,7 +1,7 @@
 import json
 
 from langchain.tools import tool
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from core.db.database import get_clickhouse_client
 
