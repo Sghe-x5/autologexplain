@@ -40,6 +40,8 @@ npm run test:coverage
 
 - `src/__tests__/getFilters.test.ts` - Базовые тесты для функции GetFilters
 - `src/__tests__/getFilters.integration.test.ts` - Интеграционные тесты для GetFilters
+- `src/__tests__/api/chatManagementApi.test.ts` - Unit тесты для chatManagementApi
+- `src/__tests__/api/chatManagementApi.integration.test.ts` - Интеграционные тесты для chatManagementApi
 
 ### Конфигурация
 
@@ -121,6 +123,32 @@ it("должен выбрасывать ошибку при невалидных
   } as Response);
 
   await expect(GetFilters()).rejects.toThrow("Filters must be an array");
+});
+```
+
+#### Тест API endpoint
+
+```typescript
+it("должен успешно создавать новый чат", async () => {
+  const mockResponse = {
+    chat_id: "chat-123",
+    token: "token-456",
+  };
+
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: () => Promise.resolve(mockResponse),
+  } as Response);
+
+  const result = await chatManagementApi.endpoints.newChat.initiate().unwrap();
+
+  expect(mockFetch).toHaveBeenCalledWith(`${baseUrl}/chats/new`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  expect(result).toEqual(mockResponse);
 });
 ```
 
