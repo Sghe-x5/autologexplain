@@ -15,11 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
-COPY pyproject.toml poetry.lock* ./backend/
+COPY backend/pyproject.toml backend/poetry.lock* ./backend/
+
 RUN cd backend && poetry install --only main --no-root
 
-COPY . ./backend
-COPY ../analytics ./analytics
+COPY backend ./backend
+COPY analytics ./analytics
 
 EXPOSE 8080
 
