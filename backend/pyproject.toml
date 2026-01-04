@@ -59,3 +59,7 @@ ignore_missing_imports = true
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
