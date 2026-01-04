@@ -1,18 +1,20 @@
 import httpx
 from loguru import logger
-from schema import LogsResponse, LogRecord
-from core.config import CLICKHOUSE_PASSWORD, CLICKHOUSE_URL, CLICKHOUSE_USER, MAX_HARD_LIMIT, MAX_PAGE_SIZE
+
+from core.config import CLICKHOUSE_PASSWORD, CLICKHOUSE_URL, CLICKHOUSE_USER, MAX_PAGE_SIZE
+from schema import LogRecord, LogsResponse
 from services.utils import mask_sensitive
+
 
 def _esc(val):
     if val is None:
         return None
-    if isinstance(val, (int, float)):
+    if isinstance(val, int | float):  # UP038
         return val
     return "'" + str(val).replace("'", "''") + "'"
 
 def _build_where(filters: dict) -> str:
-    parts = [f"timestamp BETWEEN toDateTime({_esc(filters['start)date'])}) AND toDateTime({_esc(filters['end_date'])})"]
+    parts = [f"timestamp BETWEEN toDateTime({_esc(filters['start_date'])}) AND toDateTime({_esc(filters['end_date'])})"]
     for key in ("product", "service", "environment", "level", "trace_id", "ip_address", "method", "status_code", "url_path"):
         if filters.get(key) is not None:
             parts.append(f"{key} = {_esc(filters[key])}")
