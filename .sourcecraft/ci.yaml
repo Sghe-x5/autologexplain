@@ -3,10 +3,21 @@ on:
     - workflows: test-backend-workflow
       filter:
         paths: "backend/**"
-
+    - workflows: test-analytics-workflow
+      filter:
+        paths: "analytics/**"
     - workflows: test-frontend-workflow
       filter:
         paths: "frontend/**"
+  push:
+    - workflows: ["test-backend-workflow", "build-backend-workflow"]
+      filter:
+        paths: "backend/**"
+        branches: "main"
+    - workflows: ["test-analytics-workflow", "build-analytics-workflow"]
+      filter:
+        paths: "analytics/**"
+        branches: "main"
 
 workflows:
   test-backend-workflow:
@@ -17,8 +28,78 @@ workflows:
     tasks:
       - frontend-linters
       - frontend-tests
+  test-analytics-workflow:
+    tasks:
+      - analytics-linters
+      - analytics-tests
+  build-backend-workflow:
+    tasks:
+      - backend-build-push
+  build-analytics-workflow:
+    tasks:
+      - analytics-build-push
 
 tasks:
+  - name: analytics-build-push
+    env:
+      YC_DOCKER_REGISTRY_URI: cr.yandex/crp9a5kr08o67cpmqtkl
+      IMAGE_NAME: analytics
+      YC_SERVICE_ACCOUNT_ID: ajed0e5oqj975k8up4vp
+      YC_AUTHORIZED_KEY_JSON: ${{ secrets.service_key }}
+      YC_FOLDER_ID: b1g3u90stuffbcgnkgne
+    cubes:
+      - name: install-yc
+        script:
+          - curl -o ./yc-install.sh -L https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
+          - echo 'source /root/yandex-cloud/completion.zsh.inc' >>  ~/.zshrc
+          - chmod +x ./yc-install.sh && ./yc-install.sh -i /tmp/yc -n && mv /tmp/yc/bin/yc /usr/bin/yc
+          - echo "$YC_AUTHORIZED_KEY_JSON" > key.json
+          - yc config profile create sa-profile
+          - yc config set service-account-key key.json
+          - yc config set format json
+          - yc config set folder-id $YC_FOLDER_ID
+      - name: docker-login
+        script:
+          - yc container registry configure-docker --profile sa-profile
+      - name: docker-build-push
+        script:
+          - cd $SOURCECRAFT_WORKSPACE/analytics
+          - docker build --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME --platform linux/amd64 .
+          - docker push $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest
+      - name: docker-logout
+        script:
+          - docker logout $YC_DOCKER_REGISTRY_URI
+
+  - name: backend-build-push
+    env:
+      YC_DOCKER_REGISTRY_URI: cr.yandex/crp9a5kr08o67cpmqtkl
+      IMAGE_NAME: backend
+      YC_SERVICE_ACCOUNT_ID: ajed0e5oqj975k8up4vp
+      YC_AUTHORIZED_KEY_JSON: ${{ secrets.service_key }}
+      YC_FOLDER_ID: b1g3u90stuffbcgnkgne
+    cubes:
+      - name: install-yc
+        script:
+          - curl -o ./yc-install.sh -L https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
+          - echo 'source /root/yandex-cloud/completion.zsh.inc' >>  ~/.zshrc
+          - chmod +x ./yc-install.sh && ./yc-install.sh -i /tmp/yc -n && mv /tmp/yc/bin/yc /usr/bin/yc
+          - echo "$YC_AUTHORIZED_KEY_JSON" > key.json
+          - yc config profile create sa-profile
+          - yc config set service-account-key key.json
+          - yc config set format json
+          - yc config set folder-id $YC_FOLDER_ID
+      - name: docker-login
+        script:
+          - yc container registry configure-docker --profile sa-profile
+      - name: docker-build-push
+        script:
+          - cd $SOURCECRAFT_WORKSPACE/backend
+          - docker build --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME --platform linux/amd64 .
+          - docker push $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest
+      - name: docker-logout
+        script:
+          - docker logout $YC_DOCKER_REGISTRY_URI
+
   - name: backend-linters
     cubes:
       - name: backend-linting
@@ -44,6 +125,29 @@ tasks:
           - poetry install --no-interaction --no-ansi
           - poetry run pytest
 
+  - name: analytics-linters
+    cubes:
+      - name: analytics-linting
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd analytics
+          - poetry install --no-interaction --no-ansi --no-root
+          - poetry run pip install ruff mypy
+          - poetry run ruff check .
+          - poetry run ruff format --diff .
+          - poetry run mypy .
+  - name: analytics-tests
+    cubes:
+      - name: analytics-tests
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd analytics
+          - poetry install --no-interaction --no-ansi
+          - poetry run pytest
   - name: frontend-linters
     cubes:
       - name: frontend-linting
@@ -52,7 +156,6 @@ tasks:
           - cd frontend
           - yarn install --frozen-lockfile
           - yarn lint
-
   - name: frontend-tests
     cubes:
       - name: frontend-tests
