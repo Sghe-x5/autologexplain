@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { wsRegistry } from "@/lib/model/wsRegistry";
-import { WS_BASE, baseUrl } from "@/lib/consts";
+import { WS_BASE, baseUrl } from "@/consts/api.const";
 
 function sendWebSocketMessage(chatId: string, message: any) {
   const ws = wsRegistry.get(chatId);
