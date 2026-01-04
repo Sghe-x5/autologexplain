@@ -1,0 +1,11 @@
+services:
+  analytics:
+    build: .
+    command: python main.py
+    env_file: [.env]
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+    depends_on: []
+    restart: unless-stopped

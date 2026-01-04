@@ -1,24 +1,23 @@
-# core/agent.py
-from langchain_openai import ChatOpenAI 
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from utils.config import OPENROUTER_API_KEY, LLM_MODEL_NAME
+from langchain_openai import ChatOpenAI
 
-# <<< ИЗМЕНЕНИЕ: Импортируем ВСЕ необходимые инструменты
-from core.tools.sql_query_tool import safe_sql_query_executor
-from core.tools.specialized_tools import trace_retriever, python_code_interpreter
 from core.tools.profiler_tool import data_profiler
+from core.tools.specialized_tools import python_code_interpreter, trace_retriever
+from core.tools.sql_query_tool import safe_sql_query_executor
+from utils.config import LLM_MODEL_NAME, OPENROUTER_API_KEY
 
-def create_log_agent():
+
+def create_log_agent() -> AgentExecutor:
     # <<< ИЗМЕНЕНИЕ: Добавляем новый инструмент в арсенал
     tools = [
         safe_sql_query_executor,
-        data_profiler, # Новый "орган чувств" агента
+        data_profiler,  # Новый "орган чувств" агента
         trace_retriever,
         python_code_interpreter,
     ]
-    
+
     llm = ChatOpenAI(
         model=LLM_MODEL_NAME,
         api_key=OPENROUTER_API_KEY,
@@ -28,9 +27,9 @@ def create_log_agent():
         default_headers={
             "HTTP-Referer": "http://localhost:3000",
             "X-Title": "LogSentry AI Agent",
-        }
+        },
     )
-    
+
     # <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: Новый, более умный системный промпт
     system_prompt = """
     Ты — LogSentry, элитный SQL-аналитик-детектив. Твоя задача — не просто писать SQL, а проводить расследования, чтобы найти точный ответ на вопрос пользователя. Ты работаешь с таблицей `logs` в ClickHouse.
@@ -59,21 +58,26 @@ def create_log_agent():
 
     Твоя ценность — в твоей настойчивости и способности исправлять собственные ошибки на основе данных. Действуй.
     """
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
-    
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
+    )
+
     memory = ConversationBufferWindowMemory(k=5, memory_key="chat_history", return_messages=True)
     agent = create_openai_tools_agent(llm, tools, prompt)
-    
+
     agent_executor = AgentExecutor(
-        agent=agent, tools=tools, verbose=True, memory=memory,
+        agent=agent,
+        tools=tools,
+        verbose=True,
+        memory=memory,
         handle_parsing_errors=True,
-        max_iterations=15 
+        max_iterations=15,
     )
-    
+
     return agent_executor
