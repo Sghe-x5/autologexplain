@@ -21,6 +21,7 @@ export const LogExplainUI = () => {
 
   const dispatch = useDispatch<AppDispatch>();
   const hasLog = useLogStore((state) => state.log) !== null;
+  const analysisParams = useLogStore((state) => state.analysisParams);
 
   const resetLog = useLogStore((state) => state.reset);
 
@@ -77,7 +78,9 @@ export const LogExplainUI = () => {
               <LogExplainForm filters={filters} />
             </section>
           )}
-          {hasLog && <ChatWithAI />}
+          {hasLog && (
+            <ChatWithAI autoAnalysisParams={analysisParams || undefined} />
+          )}
         </>
       )}
     </div>
