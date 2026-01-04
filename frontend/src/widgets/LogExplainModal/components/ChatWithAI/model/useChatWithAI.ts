@@ -1,38 +1,31 @@
-import { Input } from "@/components/ui/input";
-import Button from "@/components/ui/button/button";
-import { Bot } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { WS_BASE } from "@/consts/api.const";
 import type { ChatItem } from "@/lib/chat.schemas";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "@/lib/store";
+import { clearAnalysisParams as clearAnalysisParamsAction } from "../../../model/logExplainSlice";
+import { wsRegistry } from "@/lib/model/wsRegistry";
 import {
   useChatTurnMutation,
   useNewChatMutation,
   useStreamChatQuery,
   useAutoAnalysisMutation,
 } from "@/api";
-import { wsRegistry } from "@/lib/model/wsRegistry";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "@/lib/store";
-import { clearAnalysisParams as clearAnalysisParamsAction } from "../model/logExplainSlice";
 
-interface ChatWithAIProps {
+export interface UseChatWithAIParams {
   autoAnalysisParams?: {
-    filters: { start_date: string; end_date: string; service: string };
+    filters: {
+      start_date: string;
+      end_date: string;
+      service: string;
+      product?: string;
+      environment?: string;
+    };
     prompt: string;
   };
 }
 
-const TypingIndicator = () => (
-  <div className="flex gap-1 items-center text-gray-500 px-3 py-2">
-    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-  </div>
-);
-
-export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
+export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [input, setInput] = useState("");
   const [newChat] = useNewChatMutation();
@@ -95,7 +88,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
               text: "Начинаю анализ логов...",
             } as ChatItem,
           ]);
-          // Track the initial assistant message to avoid re-processing
           seenIdsRef.current.add("analysis-start");
 
           setIsAssistantTyping(true);
@@ -196,41 +188,12 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
     }
   };
 
-  return (
-    <div className="flex flex-col h-full w-full">
-      <div className="flex items-center gap-2 p-3 text-[#2463EB]">
-        <Bot />
-        <span className="font-semibold">Ответ AI ассистента</span>
-      </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollArea className="h-full w-full p-2">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "bg-[#F8FAFC] ml-auto text-black w-fit"
-                  : "bg-none text-gray-900"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-          {isAssistantTyping && <TypingIndicator />}
-        </ScrollArea>
-      </div>
-      <div className="flex min-h-0 w-full gap-2 p-2 border-t bg-white">
-        <Input
-          className="flex-1 min-w-0 active:shadow-0"
-          placeholder="Задать вопрос или уточнение..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        />
-        <Button onClick={sendMessage} disabled={isSending}>
-          ➤
-        </Button>
-      </div>
-    </div>
-  );
-};
+  return {
+    messages,
+    input,
+    isAssistantTyping,
+    isSending,
+    setInput,
+    sendMessage,
+  } as const;
+}
