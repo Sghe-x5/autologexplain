@@ -16,7 +16,7 @@ def main() -> None:
     agent_executor = create_log_agent()
 
     print("\n--- AI Агент LogSentry (ClickHouse Edition) готов к работе ---")
-    print("Модель: Kimi K2. База: ClickHouse.")
+    print("Модель: YandexGPT 5 Pro. База: ClickHouse.")
     print("Задайте ваш вопрос или напишите 'exit' для выхода.")
 
     while True:
