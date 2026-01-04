@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import redis
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from backend.core.config import get_settings
 from backend.db.storage import create_chat
@@ -10,7 +10,7 @@ from backend.services.tokens import issue_chat_token
 router = APIRouter()
 
 
-@router.post("/new")
+@router.post("/new", status_code=status.HTTP_201_CREATED)
 def create_chat_anonymous():
     """
     Создаёт анонимный чат. Возвращает chat_id и подписанный token.
@@ -30,14 +30,23 @@ def renew_chat_token(chat_id: str):
     Выдаёт новый токен, если чат ещё существует.
     """
     s = get_settings()
-    r = redis.Redis(
-        host=s.REDIS_HOST,
-        port=int(s.REDIS_PORT),
-        db=int(s.REDIS_DB),
-        decode_responses=True,
-    )
-    if not r.exists(f"chat:{chat_id}"):
-        raise HTTPException(status_code=404, detail="chat_not_found")
+    try:
+        r = redis.Redis(
+            host=s.REDIS_HOST,
+            port=int(s.REDIS_PORT),
+            db=int(s.REDIS_DB),
+            password=s.REDIS_PASSWORD or None,
+            decode_responses=True,
+            socket_timeout=2.0,
+            socket_connect_timeout=2.0,
+            retry_on_timeout=True,
+        )
+        if not r.exists(f"chat:{chat_id}"):
+            raise HTTPException(status_code=404, detail="chat_not_found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="redis_unavailable") from e
 
     token = issue_chat_token(chat_id)
     return {"chat_id": chat_id, "token": token}
