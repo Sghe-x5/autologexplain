@@ -5,10 +5,19 @@ from services import tokens
 
 @pytest.fixture
 def mock_settings(monkeypatch):
-    def _mock_settings(secret="super-secret-key-12345678901234567890", ttl="3600"):
+    def _mock_settings(
+            secret="super-secret-key-12345678901234567890",
+            ttl="3600",
+            host="test_host",
+            port="6379",
+            db="0",
+    ):
 
         monkeypatch.setenv("TOKEN_SECRET", secret)
         monkeypatch.setenv("TOKEN_TTL_SECONDS", ttl)
+        monkeypatch.setenv("REDIS_HOST", host)
+        monkeypatch.setenv("REDIS_PORT", port)
+        monkeypatch.setenv("REDIS_DB", db)
 
         tokens.get_settings.cache_clear()
 
