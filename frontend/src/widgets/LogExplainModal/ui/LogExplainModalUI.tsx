@@ -1,15 +1,26 @@
 import { LogExplainForm } from "../components/Form";
 import { Separator } from "@/components/ui/separator";
 import { ChatWithAI } from "@/widgets/LogExplainModal/components/ChatWithAI";
-import { Bot, X } from "lucide-react";
+import { Bot, RotateCcw, X } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { type AppDispatch } from "@/lib/store";
 import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
+import { useLogStore } from "../model/store";
+import { Button } from "@/components/ui/button";
 
 export const LogExplainUI = () => {
   const dispatch = useDispatch<AppDispatch>();
+
+  const hasLog = useLogStore((state) => state.log) !== null;
+
+  const resetLog = useLogStore((state) => state.reset);
+
+  const onReset = () => {
+    resetLog();
+  };
+
   return (
-    <div className="p-5 absolute top-0 z-50 bg-white">
+    <div className="w-full h-full p-5 absolute top-0 z-50 bg-white">
       <div className="flex justify-between">
         <div className="flex gap-3 items-center">
           <div className="p-4 w-fit bg-[#DBE9FE] rounded-lg">
@@ -20,7 +31,9 @@ export const LogExplainUI = () => {
               AI Ассистент
             </h1>
             <p className="text-[#64748b] font-[400] text-[16px]">
-              Задайте параметры для анализа логов
+              {hasLog
+                ? "Результаты анализа логов по заданным параметрам"
+                : "Задайте параметры для анализа логов"}
             </p>
           </div>
         </div>
@@ -32,12 +45,24 @@ export const LogExplainUI = () => {
         </button>
       </div>
 
+      {hasLog && (
+        <Button
+          type="button"
+          className="w-full mt-4 h-11 border"
+          variant="ghost"
+          onClick={onReset}
+        >
+          <RotateCcw /> Сбросить и задать новые параметры
+        </Button>
+      )}
+
       <Separator className="my-5" />
-      <section>
-        <LogExplainForm />
-      </section>
-      <Separator className="my-8" />
-      <ChatWithAI />
+      {!hasLog && (
+        <section>
+          <LogExplainForm />
+        </section>
+      )}
+      {hasLog && <ChatWithAI />}
     </div>
   );
 };

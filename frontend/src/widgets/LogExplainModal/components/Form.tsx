@@ -63,7 +63,6 @@ const LogExplainForm = () => {
   });
 
   const setLog = useLogStore((state) => state.setLog);
-  const resetLog = useLogStore((state) => state.reset);
 
   const watchProduct = form.watch("product");
   const watchService = form.watch("service");
@@ -78,18 +77,12 @@ const LogExplainForm = () => {
     setLog(mockData);
   };
 
-  const onReset = () => {
-    form.reset();
-    resetLog();
-  };
-
   const interactiveField =
     "border border-gray-300 rounded-md transition-colors duration-200 " +
     "hover:border-[#2463EB] focus-within:border-[#2463EB] " +
     "focus-within:ring-2 focus-within:ring-[#93C5FD]/40";
 
-  const isFormDisabled =
-    !form.formState.isValid || form.formState.isSubmitting;
+  const isFormDisabled = !form.formState.isValid || form.formState.isSubmitting;
 
   return (
     <Form {...form}>
@@ -114,9 +107,7 @@ const LogExplainForm = () => {
                 value={field.value}
               >
                 <FormControl>
-                  <SelectTrigger
-                    className={`w-full ${interactiveField}`}
-                  >
+                  <SelectTrigger className={`w-full ${interactiveField}`}>
                     <SelectValue placeholder="Выберите продукт" />
                   </SelectTrigger>
                 </FormControl>
@@ -149,9 +140,7 @@ const LogExplainForm = () => {
                 value={field.value}
               >
                 <FormControl>
-                  <SelectTrigger
-                    className={`w-full ${interactiveField}`}
-                  >
+                  <SelectTrigger className={`w-full ${interactiveField}`}>
                     <SelectValue placeholder="Выберите сервис" />
                   </SelectTrigger>
                 </FormControl>
@@ -186,9 +175,7 @@ const LogExplainForm = () => {
                 value={field.value}
               >
                 <FormControl>
-                  <SelectTrigger
-                    className={`w-full ${interactiveField}`}
-                  >
+                  <SelectTrigger className={`w-full ${interactiveField}`}>
                     <SelectValue placeholder="Выберите окружение" />
                   </SelectTrigger>
                 </FormControl>
@@ -215,7 +202,13 @@ const LogExplainForm = () => {
                 <FormItem className="flex-1">
                   <FormControl>
                     <div className={interactiveField}>
-                      <div className={!watchEnvironment ? "pointer-events-none opacity-50" : ""}>
+                      <div
+                        className={
+                          !watchEnvironment
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      >
                         <DatePicker
                           label=""
                           value={field.value}
@@ -238,7 +231,13 @@ const LogExplainForm = () => {
                 <FormItem className="flex-1">
                   <FormControl>
                     <div className={interactiveField}>
-                      <div className={!watchEnvironment ? "pointer-events-none opacity-50" : ""}>
+                      <div
+                        className={
+                          !watchEnvironment
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      >
                         <DatePicker
                           label=""
                           value={field.value}
@@ -259,23 +258,13 @@ const LogExplainForm = () => {
 
         <Separator />
 
-        <div className="flex gap-2">
-          <Button
-            type="submit"
-            className="flex-[11] bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
-            disabled={isFormDisabled}
-          >
-            <Sparkles /> Анализировать логи
-          </Button>
-          <Button
-            type="button"
-            className="flex-[1]"
-            variant="secondary"
-            onClick={onReset}
-          >
-            Сбросить
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          className=" bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
+          disabled={isFormDisabled}
+        >
+          <Sparkles /> Анализировать логи
+        </Button>
       </form>
     </Form>
   );

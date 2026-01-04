@@ -47,8 +47,8 @@ export const ChatWithAI = () => {
               key={idx}
               className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
                 msg.role === "user"
-                  ? "bg-blue-500 text-white ml-auto"
-                  : "bg-gray-200 text-gray-900"
+                  ? "bg-[#F8FAFC] ml-auto text-black w-fit"
+                  : "bg-none text-gray-900"
               }`}
             >
               {msg.content}
