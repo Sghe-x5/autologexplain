@@ -8,6 +8,7 @@ import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
 import { useLogStore } from "../model/store";
 import Button from "@/components/ui/button/button";
 import { type FilterData } from "@/api/getFilters";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const LogExplainUI = ({
   filters,
@@ -28,7 +29,7 @@ export const LogExplainUI = ({
 
   return (
     <div
-      className="w-full h-full p-5 absolute top-0 z-50 bg-white"
+      className="flex flex-col flex-1 h-screen p-5 z-50 bg-white"
       data-test-id="log-explain-modal"
     >
       <div className="flex justify-between" data-test-id="log-explain-header">
@@ -85,13 +86,18 @@ export const LogExplainUI = ({
       ) : (
         <>
           {!hasLog && (
-            <section data-test-id="log-explain-form-section">
-              <LogExplainForm filters={filters} />
-            </section>
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea
+                className="h-full w-full pr-4 [&_[data-slot=scroll-area-scrollbar]]:w-2"
+                data-test-id="log-explain-form-section"
+              >
+                <LogExplainForm filters={filters} />
+              </ScrollArea>
+            </div>
           )}
           {hasLog && (
             <div
-              className="h-full max-h-full"
+              className="flex-1 w-full min-h-0"
               data-test-id="chat-with-ai-section"
             >
               <ChatWithAI autoAnalysisParams={analysisParams || undefined} />

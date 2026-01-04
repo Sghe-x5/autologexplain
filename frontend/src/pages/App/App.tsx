@@ -2,11 +2,12 @@ import LogExplainUI from "@/widgets/LogExplainModal";
 import "./App.css";
 import { createPortal } from "react-dom";
 
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { LogExplainBtn } from "@/widgets/LogExplainModal/components/LogExplainBtn";
-import type { RootState } from "@/lib/store";
+import type { AppDispatch, RootState } from "@/lib/store";
 import { useEffect, useState } from "react";
 import { type FilterData, GetFilters } from "@/api/getFilters";
+import { close } from "@/widgets/LogExplainModal/model/showModalSlice";
 
 const FILTERS_KEY = "logExplainFilters";
 
@@ -16,6 +17,7 @@ function App() {
 
   const [filters, setFilters] = useState<FilterData[]>([]);
   const [isFiltersLoaded, setFiltersLoaded] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     const saved = localStorage.getItem(FILTERS_KEY);
@@ -53,13 +55,6 @@ function App() {
 
   return (
     <main data-test-id="app-root">
-      {isShown && (
-        <div
-          className="fixed inset-0 bg-[#18181B99] backdrop-blur-sm z-40"
-          data-test-id="modal-backdrop"
-        ></div>
-      )}
-
       <div className="w-full max-w-screen h-full max-h-screen overflow-hidden">
         <img src="/images/AppBG.webp" data-test-id="app-background" />
       </div>
@@ -67,11 +62,18 @@ function App() {
       {modalRoot !== null &&
         isShown &&
         createPortal(
-          <LogExplainUI
-            filters={filters}
-            isFiltersLoaded={isFiltersLoaded}
-            data-test-id="log-explain-ui"
-          />,
+          <>
+            <div
+              className="flex-1 max-[580px]:hidden inset-0 bg-[#18181B99] backdrop-blur-sm z-40"
+              data-test-id="modal-backdrop"
+              onClick={() => dispatch(close())}
+            ></div>
+            <LogExplainUI
+              filters={filters}
+              isFiltersLoaded={isFiltersLoaded}
+              data-test-id="log-explain-ui"
+            />
+          </>,
           modalRoot
         )}
 
