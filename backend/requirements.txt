@@ -6,3 +6,5 @@ httpx
 requests
 loguru
 python-dotenv
+pydantic_settings
+clickhouse_connect
