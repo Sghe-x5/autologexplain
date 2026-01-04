@@ -4,22 +4,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- YandexGPT/LLM Config ---
 YC_FOLDER_ID = os.getenv("FOLDER_ID")
-YC_IAM_TOKEN = os.getenv("IAM_TOKEN")  # Используйте YC_API_KEY, если предпочитаете API-ключ
-YC_API_KEY = os.getenv("YC_API_KEY")  # Добавьте, если используете API-ключ
+YC_IAM_TOKEN = os.getenv("IAM_TOKEN")
+YC_API_KEY = os.getenv("YC_API_KEY")
 
-# Проверка наличия хотя бы одного из токенов
 if not YC_IAM_TOKEN and not YC_API_KEY:
     raise ValueError("Не найдены ни YC_IAM_TOKEN, ни YC_API_KEY в файле .env")
 
 if not YC_FOLDER_ID:
     raise ValueError("Не найден YC_FOLDER_ID в файле .env")
 
-# Модель YandexGPT для использования. Можно выбрать "yandexgpt-lite" для более быстрых ответов.
+
 LLM_MODEL_NAME = "yandexgpt"
 
-# --- ClickHouse Config ---
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "localhost")
 CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", 8123))
 CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")

@@ -7,7 +7,7 @@ import time
 from hashlib import sha256
 from typing import Any
 
-from core.config import get_settings
+from backend.core.config import get_settings
 
 
 class TokenSecretError(RuntimeError):

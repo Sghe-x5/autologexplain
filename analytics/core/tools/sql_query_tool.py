@@ -3,7 +3,7 @@ import json
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from core.db.database import get_clickhouse_client
+from analytics.core.db.database import get_clickhouse_client
 
 
 class SafeSQLExecutorArgs(BaseModel):

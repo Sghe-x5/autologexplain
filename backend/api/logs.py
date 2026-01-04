@@ -6,9 +6,9 @@ import redis
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
-from core.config import get_settings
-from db.db import ping as ch_ping
-from db.db import query
+from backend.core.config import get_settings
+from backend.db.db import ping as ch_ping
+from backend.db.db import query
 
 router = APIRouter()
 

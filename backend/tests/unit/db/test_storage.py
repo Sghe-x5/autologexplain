@@ -4,8 +4,7 @@ from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
 import pytest
-
-from db.storage import (
+from backend.db.storage import (
     RedisUnavailableError,
     _now_iso,
     _refresh_ttl,
@@ -26,7 +25,7 @@ def test_now_iso():
 
 def test_init_store_success():
     """Проверяем успешный вызов ping()."""
-    with patch("db.storage._r") as mock_redis:
+    with patch("backend.db.storage._r") as mock_redis:
         mock_redis.return_value.ping.return_value = True
         init_store()
         mock_redis.return_value.ping.assert_called_once()
@@ -34,7 +33,7 @@ def test_init_store_success():
 
 def test_init_store_failure():
     """Проверяем ошибку при недоступности Redis."""
-    with patch("db.storage._r") as mock_redis:
+    with patch("backend.db.storage._r") as mock_redis:
         mock_redis.return_value.ping.side_effect = ConnectionError("Redis is down")
         with pytest.raises(RedisUnavailableError):
             init_store()
@@ -44,7 +43,7 @@ def test_refresh_ttl(monkeypatch, mock_settings):
     """Проверяем, что TTL продлевается для ключей чата."""
     mock_settings(chat_ttl=3600)
     mock_redis = Mock()
-    monkeypatch.setattr("db.storage._r", lambda: mock_redis)
+    monkeypatch.setattr("backend.db.storage._r", lambda: mock_redis)
 
     _refresh_ttl("chat123")
 
@@ -55,7 +54,7 @@ def test_refresh_ttl(monkeypatch, mock_settings):
 def test_create_chat(monkeypatch):
     """Проверяем создание чата и добавление в индекс."""
     mock_redis = Mock()
-    monkeypatch.setattr("db.storage._r", lambda: mock_redis)
+    monkeypatch.setattr("backend.db.storage._r", lambda: mock_redis)
     monkeypatch.setattr(
         "uuid.uuid4",
         lambda: uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
@@ -79,7 +78,7 @@ def test_create_chat(monkeypatch):
 def test_add_message(monkeypatch):
     """Проверяем добавление сообщения в Redis."""
     mock_redis = Mock()
-    monkeypatch.setattr("db.storage._r", lambda: mock_redis)
+    monkeypatch.setattr("backend.db.storage._r", lambda: mock_redis)
     monkeypatch.setattr(
         "uuid.uuid4",
         lambda: uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
@@ -113,7 +112,7 @@ def test_list_messages(monkeypatch):
         '{"id": "msg1", "role": "user", "content": "Hello", "metadata": {}}',
         '{"id": "msg2", "role": "bot", "content": "Hi", "meta": {"key": "value"}}',
     ]
-    monkeypatch.setattr("db.storage._r", lambda: mock_redis)
+    monkeypatch.setattr("backend.db.storage._r", lambda: mock_redis)
 
     messages = list_messages("chat123", limit=50)
 
@@ -128,7 +127,7 @@ def test_list_messages_empty(monkeypatch):
     """Проверяем пустой список сообщений."""
     mock_redis = Mock()
     mock_redis.llen.return_value = 0
-    monkeypatch.setattr("db.storage._r", lambda: mock_redis)
+    monkeypatch.setattr("backend.db.storage._r", lambda: mock_redis)
 
     messages = list_messages("chat123")
     assert messages == []

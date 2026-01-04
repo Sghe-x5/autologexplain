@@ -2,7 +2,7 @@ from typing import Any
 
 import clickhouse_connect
 
-from utils.config import (
+from analytics.utils.config import (
     CLICKHOUSE_DATABASE,
     CLICKHOUSE_HOST,
     CLICKHOUSE_PASSWORD,
