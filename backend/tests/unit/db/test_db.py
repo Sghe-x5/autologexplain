@@ -1,5 +1,6 @@
-from unittest.mock import patch, Mock
-from db.db import query, ping, _normalize_json_columns
+from unittest.mock import Mock, patch
+
+from db.db import _normalize_json_columns, ping, query
 
 
 def test_ping_success(mock_ch_client):

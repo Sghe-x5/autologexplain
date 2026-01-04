@@ -3,7 +3,7 @@ import json
 import time
 from hashlib import sha256
 
-from services.tokens import issue_chat_token, verify_chat_token, _b64, _unb64, _secret
+from services.tokens import _b64, _secret, issue_chat_token, verify_chat_token
 
 
 def test_verify_valid_token(mock_settings):
@@ -78,9 +78,6 @@ def test_verify_malformed_token():
 def test_verify_token_without_chat_id(mock_settings):
     """Проверяем обработку токена без chat_id"""
     mock_settings(secret="a" * 32)
-
-    from services.tokens import _b64
-    import json
 
     payload = {"iat": int(time.time()), "exp": int(time.time()) + 3600}
     p_bytes = json.dumps(payload).encode("utf-8")

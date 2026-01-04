@@ -1,9 +1,9 @@
 from unittest.mock import Mock
 
 import pytest
+from clickhouse_connect.driver.client import Client
 
 from services import tokens
-from clickhouse_connect.driver.client import Client
 
 
 @pytest.fixture
