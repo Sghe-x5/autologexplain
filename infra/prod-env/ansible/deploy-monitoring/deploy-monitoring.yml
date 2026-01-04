@@ -64,9 +64,13 @@
 
     - name: Ensure Grafana provisioning dirs
       file:
-        path: /opt/monitoring/grafana/datasources
+        path: "/opt/monitoring/grafana/{{ item }}"
         state: directory
         mode: "0755"
+      loop:
+        - datasources
+        - dashboards
+        - dashboards/builtins
 
     - name: Provision Grafana datasources (Prometheus & Loki)
       copy:
@@ -85,6 +89,18 @@
               access: proxy
               url: http://loki:3100
 
+    - name: Provision Grafana dashboards provider
+      copy:
+        src: "{{ playbook_dir }}/dashboards/provider.yml"
+        dest: /opt/monitoring/grafana/dashboards/provider.yml
+        mode: "0644"
+
+    - name: Upload Grafana dashboards directory
+      copy:
+        src: "{{ playbook_dir }}/dashboards/"
+        dest: "/opt/monitoring/grafana/dashboards/"
+        mode: "0644"
+
     - name: Render Loki config
       template:
         src: templates/loki-config.yml.j2
@@ -98,63 +114,81 @@
         mode: "0644"
 
     - name: Start monitoring stack
-      shell: docker compose up -d
+      shell: docker compose up -d --build
       args:
         chdir: /opt/monitoring
 
-- name: Deploy exporters and promtail on app nodes
-  hosts: "app-*"
-  become: true
-  gather_facts: true
-  vars:
-    loki_url: "http://{{ hostvars[groups['bastion'][0]].ansible_host | default('bastion') }}:3100"
-    deploy_app_exporters: false
-  tasks:
-    - name: Ensure monitoring dir
-      file:
-        path: /opt/monitoring
-        state: directory
-        mode: "0755"
-      when: deploy_app_exporters | bool
+# - name: Deploy exporters and promtail on app nodes
+#   hosts: "app-*"
+#   become: true
+#   gather_facts: true
+#   vars:
+#     loki_url: "http://{{ hostvars[groups['bastion'][0]].ansible_host | default('bastion') }}:3100"
+#     deploy_app_exporters: false
+#   tasks:
+#     - name: Ensure monitoring dir
+#       file:
+#         path: /opt/monitoring
+#         state: directory
+#         mode: "0755"
+#       when: deploy_app_exporters | bool
 
-    - name: Render promtail config
-      template:
-        src: templates/promtail-config.yml.j2
-        dest: /opt/monitoring/promtail-config.yml
-        mode: "0644"
-      when: deploy_app_exporters | bool
+#     - name: Render promtail config
+#       template:
+#         src: templates/promtail-config.yml.j2
+#         dest: /opt/monitoring/promtail-config.yml
+#         mode: "0644"
+#       when: deploy_app_exporters | bool
 
-    - name: Run node-exporter
-      shell: |
-        docker rm -f node-exporter 2>/dev/null || true
-        docker run -d --name node-exporter --restart unless-stopped \
-          -p 9100:9100 \
-          --pid="host" \
-          -v /:/host:ro,rslave \
-          prom/node-exporter:latest \
-          --path.rootfs=/host
-      when: deploy_app_exporters | bool
+#     - name: Stop existing node-exporter if running
+#       shell: |
+#         docker stop node-exporter 2>/dev/null || true
+#         docker rm node-exporter 2>/dev/null || true
+#       when: deploy_app_exporters | bool
+#       ignore_errors: true
 
-    - name: Run cAdvisor
-      shell: |
-        docker rm -f cadvisor 2>/dev/null || true
-        docker run -d --name cadvisor --restart unless-stopped \
-          -p 8080:8080 \
-          -v /:/rootfs:ro \
-          -v /var/run:/var/run:ro \
-          -v /sys:/sys:ro \
-          -v /var/lib/docker/:/var/lib/docker:ro \
-          gcr.io/cadvisor/cadvisor:latest
-      when: deploy_app_exporters | bool
+#     - name: Run node-exporter
+#       shell: |
+#         docker run -d --name node-exporter --restart unless-stopped \
+#           -p 9100:9100 \
+#           --pid="host" \
+#           -v /:/host:ro,rslave \
+#           prom/node-exporter:latest \
+#           --path.rootfs=/host
+#       when: deploy_app_exporters | bool
 
-    - name: Run promtail
-      shell: |
-        docker rm -f promtail 2>/dev/null || true
-        docker run -d --name promtail --restart unless-stopped \
-          -v /opt/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro \
-          -v /var/log:/var/log:ro \
-          -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
-          -p 1514:1514 \
-          grafana/promtail:2.9.3 \
-          -config.file=/etc/promtail/config.yml
-      when: deploy_app_exporters | bool
+#     - name: Stop existing cAdvisor if running
+#       shell: |
+#         docker stop cadvisor 2>/dev/null || true
+#         docker rm cadvisor 2>/dev/null || true
+#       when: deploy_app_exporters | bool
+#       ignore_errors: true
+
+#     - name: Run cAdvisor
+#       shell: |
+#         docker run -d --name cadvisor --restart unless-stopped \
+#           -p 1337:8080 \
+#           -v /:/rootfs:ro \
+#           -v /var/run:/var/run:ro \
+#           -v /sys:/sys:ro \
+#           -v /var/lib/docker/:/var/lib/docker:ro \
+#           gcr.io/cadvisor/cadvisor:latest
+#       when: deploy_app_exporters | bool
+
+#     - name: Stop existing promtail if running
+#       shell: |
+#         docker stop promtail 2>/dev/null || true
+#         docker rm promtail 2>/dev/null || true
+#       when: deploy_app_exporters | bool
+#       ignore_errors: true
+
+#     - name: Run promtail
+#       shell: |
+#         docker run -d --name promtail --restart unless-stopped \
+#           -v /opt/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro \
+#           -v /var/log:/var/log:ro \
+#           -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
+#           -p 1514:1514 \
+#           grafana/promtail:3.5.3 \
+#           -config.file=/etc/promtail/config.yml
+#       when: deploy_app_exporters | bool

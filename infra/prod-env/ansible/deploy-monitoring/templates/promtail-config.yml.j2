@@ -20,6 +20,13 @@ scrape_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
     relabel_configs:
+      - target_label: job
+        replacement: docker
+      # Attach node identity for per-host filtering in Grafana
+      - target_label: host
+        replacement: "{{ inventory_hostname | default(ansible_hostname | default('unknown')) }}"
+      - target_label: instance
+        replacement: "{{ inventory_hostname | default(ansible_hostname | default('unknown')) }}"
       - source_labels: ['__meta_docker_container_name']
         target_label: container
         regex: '/(.*)'
@@ -57,4 +64,6 @@ scrape_configs:
       - targets: [localhost]
         labels:
           job: syslog
+          host: "{{ inventory_hostname | default(ansible_hostname | default('unknown')) }}"
+          instance: "{{ inventory_hostname | default(ansible_hostname | default('unknown')) }}"
           __path__: /var/log/*.log

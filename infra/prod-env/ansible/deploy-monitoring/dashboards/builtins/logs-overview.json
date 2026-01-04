@@ -1,0 +1,69 @@
+{
+  "title": "Logs Overview",
+  "uid": "logs-overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "server",
+        "type": "query",
+        "datasource": "Loki",
+        "query": "label_values({job=\"docker\"}, host)",
+        "includeAll": true,
+        "refresh": 1
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Loki",
+        "query": "label_values({job=\"docker\", host=~\"$server\"}, service)",
+        "includeAll": true,
+        "refresh": 1
+      },
+      {
+        "name": "level",
+        "type": "custom",
+        "query": "info,warning,error,debug",
+        "includeAll": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Combined logs (filterable)",
+      "gridPos": {"h": 16, "w": 24, "x": 0, "y": 0},
+      "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true},
+      "targets": [
+        {"expr": "{job=\"docker\", host=~\"$server\", service=~\"$service\"}", "datasource": "Loki"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Logs rate (lines/s)",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 16},
+      "targets": [
+        {"expr": "sum(rate({job=\"docker\", host=~\"$server\", service=~\"$service\"}[1m]))", "datasource": "Loki"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Error lines/s",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 16},
+      "targets": [
+        {"expr": "sum(rate({job=\"docker\", host=~\"$server\", level=~\"error|ERR|ERROR\"}[1m]))", "datasource": "Loki"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Top noisy services",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 16},
+      "targets": [
+        {"expr": "topk(5, sum by (service) (rate({job=\"docker\", host=~\"$server\"}[5m])))", "datasource": "Loki"}
+      ]
+    }
+  ]
+}
