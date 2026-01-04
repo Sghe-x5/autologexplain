@@ -57,7 +57,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
   }
 
   return (
-    <div className="flex gap-1 h-[300px] items-center px-1 py-1">
+    <div className="flex gap-1 h-[360px] items-center px-1 py-1">
       <div
         ref={hourRef}
         className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
@@ -67,7 +67,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
           <div
             key={`h-${i}`}
             onClick={() => handleClickHour(h)}
-            className={`cursor-pointer px-4 py-2 h-9 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
+            className={`cursor-pointer px-4 py-1 h-8 mb-1 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
               h === time.hours ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
@@ -84,7 +84,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
           <div
             key={`m-${i}`}
             onClick={() => handleClickMinute(m)}
-            className={`cursor-pointer px-4 py-2 h-9 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
+            className={`cursor-pointer px-4 py-1 h-8 mb-1 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
               m === time.minutes ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
