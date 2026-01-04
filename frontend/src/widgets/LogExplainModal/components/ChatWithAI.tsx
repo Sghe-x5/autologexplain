@@ -63,12 +63,10 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
 
   // Автоматический запуск анализа при получении параметров
   useEffect(() => {
-    // Сбрасываем флаг инициализации при изменении параметров
     if (autoAnalysisParams !== undefined) {
       initializationRef.current = false;
     }
 
-    // Предотвращаем множественные вызовы
     if (initializationRef.current) return;
 
     if (autoAnalysisParams && !chat && !isInitializing) {
@@ -81,7 +79,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
           const result = await autoAnalysis().unwrap();
           setChat({ chatId: result.chatId, token: result.token });
 
-          // Добавляем системное сообщение о начале анализа
           setMessages([
             {
               id: crypto.randomUUID(),
@@ -103,7 +100,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
         }
       })();
     } else if (!autoAnalysisParams && !chat && !isInitializing) {
-      // Обычное создание чата
       initializationRef.current = true;
       setIsInitializing(true);
 
@@ -129,7 +125,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
 
   const { data } = useStreamChatQuery(streamParams!, { skip: !chat });
 
-  // Отправляем запрос на анализ после установки WebSocket соединения
   useEffect(() => {
     if (chat && autoAnalysisParams && data?.connected) {
       console.log("WebSocket connected, sending analysis request...");
@@ -146,8 +141,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
         console.log("Sending analysis request:", message);
         ws.send(JSON.stringify(message));
 
-        // Очищаем параметры анализа после отправки
-        // Это предотвратит повторную отправку
         clearAnalysisParams();
       }
     }
@@ -156,7 +149,6 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   useEffect(() => {
     if (data?.items?.length) {
       setMessages((prev) => {
-        // Добавляем только новые сообщения, которых еще нет в prev по id
         const existingIds = new Set(prev.map((m) => m.id));
         const newMessages = data.items
           .filter((m: ChatItem) => !existingIds.has(m.id))
@@ -187,12 +179,21 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   };
 
   return (
-    <div className="w-full max-h-full h-full flex flex-col">
-      <div className="flex items-center gap-2 p-3 text-[#2463EB]">
+    <div
+      className="w-full max-h-full h-full flex flex-col"
+      data-test-id="chat-with-ai"
+    >
+      <div
+        className="flex items-center gap-2 p-3 text-[#2463EB]"
+        data-test-id="chat-header"
+      >
         <Bot />
         <span className="font-semibold">Ответ AI ассистента</span>
       </div>
-      <ScrollArea className="h-full py-2 px-2">
+      <ScrollArea
+        className="h-full py-2 px-2"
+        data-test-id="chat-messages-scroll"
+      >
         {messages.length > 0 &&
           messages.map((msg, idx) => (
             <div
@@ -202,19 +203,28 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
                   ? "bg-[#F8FAFC] ml-auto text-black w-fit"
                   : "bg-none text-gray-900"
               }`}
+              data-test-id={`chat-message-${msg.role}`}
             >
               {msg.text}
             </div>
           ))}
       </ScrollArea>
-      <div className="flex gap-2 p-2 border-t bg-white sticky bottom-0">
+      <div
+        className="flex gap-2 p-2 border-t bg-white sticky bottom-0"
+        data-test-id="chat-input-wrapper"
+      >
         <Input
           placeholder="Задать вопрос или уточнение..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          data-test-id="chat-input"
         />
-        <Button onClick={sendMessage} disabled={false}>
+        <Button
+          onClick={sendMessage}
+          disabled={false}
+          data-test-id="chat-send-button"
+        >
           ➤
         </Button>
       </div>
