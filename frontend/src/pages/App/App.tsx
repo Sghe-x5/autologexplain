@@ -13,7 +13,13 @@ function App() {
   return (
     <main data-test-id="app-root">
       <div className="w-full max-w-screen h-full max-h-screen overflow-hidden">
-        <img src="/images/AppBG.webp" data-test-id="app-background" />
+        <img
+          src="/images/AppBG.webp"
+          loading="lazy"
+          decoding="async"
+          alt=""
+          data-test-id="app-background"
+        />
       </div>
 
       {modalRoot !== null &&
@@ -21,7 +27,7 @@ function App() {
         createPortal(
           <>
             <div
-              className="flex-1 max-[580px]:hidden inset-0 bg-[#18181B99] backdrop-blur-sm z-40"
+              className="flex-1 max-[580px]:hidden inset-0 bg-[#18181B99] z-40"
               data-test-id="modal-backdrop"
               onClick={onBackdropClick}
             ></div>

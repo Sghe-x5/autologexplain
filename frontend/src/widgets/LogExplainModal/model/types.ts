@@ -9,10 +9,10 @@ export const logFormSchema = z
     startTime: z.date(),
     endTime: z.date(),
     comment: z
-    .string()
-    .max(1000, "Максимум 1000 символов")
-    .optional()
-    .or(z.literal("")),
+      .string()
+      .max(1000, "Максимум 1000 символов")
+      .optional()
+      .or(z.literal("")),
   })
   .refine((data) => data.startTime <= data.endTime, {
     message: "Время начала должно быть меньше или равно времени окончания",
@@ -29,20 +29,4 @@ export const logFormSchema = z
 
 export type LogExplanation = z.infer<typeof logFormSchema>;
 
-export interface UserLogExplanation {
-  userId: number;
-  period: string | null;
-  service: string;
-  visits: number;
-  sessionDurationSeconds: number;
-  sessionDurationReadable: string;
-  purchases: {
-    count: number;
-    totalAmount: number;
-  };
-  refunds: {
-    count: number;
-    totalAmount: number;
-  };
-  summary: string;
-}
+// Типы для хранения логов и моковые данные удалены

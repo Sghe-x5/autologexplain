@@ -19,38 +19,19 @@ import {
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useController, type Control } from "react-hook-form";
+import { useMemo } from "react";
 import { Separator } from "@/components/ui/separator";
-import {
-  logFormSchema,
-  type LogExplanation,
-  type UserLogExplanation,
-} from "../model/types";
-import { useLogStore } from "../model/store";
-import { getPeriod } from "@/lib/getPeriod";
+import { logFormSchema, type LogExplanation } from "../model/types";
 import { Sparkles } from "lucide-react";
 import { useAutoAnalysisMutation } from "@/api/chatMessagesApi";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "@/lib/store";
+import { startAnalysis } from "../model/logExplainSlice";
 
 import { type FilterData } from "@/api/getFilters";
 import { Textarea } from "@/components/ui/textarea";
 
-const mockData: UserLogExplanation = {
-  userId: 123,
-  period: null,
-  service: "userService",
-  visits: 1,
-  sessionDurationSeconds: 1806,
-  sessionDurationReadable: "примерно 30 минут",
-  purchases: {
-    count: 0,
-    totalAmount: 0.0,
-  },
-  refunds: {
-    count: 1,
-    totalAmount: 1800.51,
-  },
-  summary:
-    "Пользователь, вероятно, пытался вернуть товар без фактической покупки в рамках этой сессии или возврат относится к более раннему заказу.",
-};
+// Моковые данные и хранение логов удалены
 
 const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
   const form = useForm<LogExplanation>({
@@ -65,20 +46,12 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
     },
   });
 
-  const setLog = useLogStore((state) => state.setLog);
-  const setAnalysisParams = useLogStore((state) => state.setAnalysisParams);
+  const dispatch = useDispatch<AppDispatch>();
   const [autoAnalysis, { isLoading: isAnalysisLoading }] =
     useAutoAnalysisMutation();
 
   const onSubmit = async (values: LogExplanation) => {
     try {
-      mockData.userId = 123;
-      mockData.period = getPeriod({
-        startTime: values.startTime,
-        endTime: values.endTime,
-      });
-      setLog(mockData);
-
       const filters = {
         start_date: values.startTime.toISOString(),
         end_date: values.endTime.toISOString(),
@@ -86,11 +59,8 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         service: values.service,
         environment: values.environment,
       };
-
       const prompt = "Найди ошибку и объясни из-за чего она возникла";
-      const analysisParams = { filters, prompt };
-      setAnalysisParams(analysisParams);
-
+      dispatch(startAnalysis({ filters, prompt }));
       await autoAnalysis();
     } catch (error) {
       console.error("Failed to start analysis:", error);
@@ -109,14 +79,18 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
     name: "product",
     control: form.control,
   });
-  const productData = filters.find((p) => p.product === productField.value);
+  const productData = useMemo(
+    () => filters.find((p) => p.product === productField.value),
+    [filters, productField.value]
+  );
 
   const { field: serviceField } = useController({
     name: "service",
     control: form.control,
   });
-  const serviceData = productData?.services.find(
-    (s) => s.service === serviceField.value
+  const serviceData = useMemo(
+    () => productData?.services.find((s) => s.service === serviceField.value),
+    [productData, serviceField.value]
   );
 
   const { field: environmentField } = useController({
@@ -137,10 +111,24 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
           <Select
             onValueChange={(value) => {
               productField.onChange(value);
-              form.setValue("service", "");
-              form.setValue("environment", "");
-              form.setValue("startTime", new Date());
-              form.setValue("endTime", new Date());
+              form.setValue("service", "", {
+                shouldDirty: true,
+                shouldValidate: false,
+                shouldTouch: true,
+              });
+              form.setValue("environment", "", {
+                shouldDirty: true,
+                shouldValidate: false,
+                shouldTouch: true,
+              });
+              form.setValue("startTime", new Date(), {
+                shouldDirty: true,
+                shouldValidate: false,
+              });
+              form.setValue("endTime", new Date(), {
+                shouldDirty: true,
+                shouldValidate: false,
+              });
             }}
             value={productField.value}
           >
@@ -177,9 +165,19 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
             disabled={!productField.value}
             onValueChange={(value) => {
               serviceField.onChange(value);
-              form.setValue("environment", "");
-              form.setValue("startTime", new Date());
-              form.setValue("endTime", new Date());
+              form.setValue("environment", "", {
+                shouldDirty: true,
+                shouldValidate: false,
+                shouldTouch: true,
+              });
+              form.setValue("startTime", new Date(), {
+                shouldDirty: true,
+                shouldValidate: false,
+              });
+              form.setValue("endTime", new Date(), {
+                shouldDirty: true,
+                shouldValidate: false,
+              });
             }}
             value={serviceField.value}
           >

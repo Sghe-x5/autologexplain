@@ -1,6 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import showModal from "@/widgets/LogExplainModal/model/showModalSlice";
+import logExplain from "@/widgets/LogExplainModal/model/logExplainSlice";
 import {
   chatManagementApi,
   chatMessagesApi,
@@ -11,6 +12,7 @@ import {
 export const store = configureStore({
   reducer: {
     showModal,
+    logExplain,
     [wsApi.reducerPath]: wsApi.reducer,
     [chatManagementApi.reducerPath]: chatManagementApi.reducer,
     [chatWebSocketApi.reducerPath]: chatWebSocketApi.reducer,
