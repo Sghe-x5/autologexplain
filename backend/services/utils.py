@@ -19,6 +19,7 @@ def _r() -> redis.Redis:
         host=s.REDIS_HOST,
         port=int(s.REDIS_PORT),
         db=int(s.REDIS_DB),
+        password=(s.REDIS_PASSWORD or None),
         decode_responses=True,
         health_check_interval=30,
         socket_timeout=3.0,

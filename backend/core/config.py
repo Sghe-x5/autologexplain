@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = Field(default="redis", validation_alias=AliasChoices("REDIS_HOST"))
     REDIS_PORT: int = Field(default=6379, validation_alias=AliasChoices("REDIS_PORT"))
     REDIS_DB: int = Field(default=0, validation_alias=AliasChoices("REDIS_DB"))
+    REDIS_PASSWORD: str = Field(default="", validation_alias=AliasChoices("REDIS_PASSWORD"))
 
     CELERY_BROKER_URL: str | None = Field(
         default=None, validation_alias=AliasChoices("CELERY_BROKER_URL")
@@ -59,10 +60,17 @@ class Settings(BaseSettings):
         return f"http://{self.CLICKHOUSE_HOST}:{self.CLICKHOUSE_PORT}"
 
     def _finalize(self) -> Settings:
+        from urllib.parse import quote_plus
+
+        auth = f":{quote_plus(self.REDIS_PASSWORD)}@" if self.REDIS_PASSWORD else ""
         if not self.CELERY_BROKER_URL:
-            self.CELERY_BROKER_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            self.CELERY_BROKER_URL = (
+                f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            )
         if not self.CELERY_BACKEND_URL:
-            self.CELERY_BACKEND_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            self.CELERY_BACKEND_URL = (
+                f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            )
         return self
 
 

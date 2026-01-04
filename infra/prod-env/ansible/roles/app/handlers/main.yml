@@ -1,0 +1,12 @@
+---
+- name: Restart app stack
+  command: docker compose -f /opt/app/compose.yaml up -d
+  args:
+    chdir: /opt/app
+  become: true
+
+- name: Restart docker
+  systemd:
+    name: docker
+    state: restarted
+    enabled: yes

@@ -1,0 +1,93 @@
+---
+- name: Deploy app containers to app nodes
+  hosts: "app-*"
+  become: true
+  vars:
+    frontend_image: "{{
+      (lookup('env', 'FRONTEND_IMAGE') | default('', true))
+      or (lookup('ini', 'FRONTEND_IMAGE file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'your-registry/frontend:latest'
+    }}"
+    backend_image: "{{
+      (lookup('env', 'BACKEND_IMAGE') | default('', true))
+      or (lookup('ini', 'BACKEND_IMAGE file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'your-registry/backend:latest'
+    }}"
+    analytics_image: "{{
+      (lookup('env', 'ANALYTICS_IMAGE') | default('', true))
+      or (lookup('ini', 'ANALYTICS_IMAGE file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'your-registry/analytics:latest'
+    }}"
+    app_port: 80
+    # Backend env vars
+    ai_api_key: "{{
+      (lookup('env', 'AI_API_KEY') | default('', true))
+      or (lookup('ini', 'AI_API_KEY file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'your-key-here'
+    }}"
+    ai_model: "gpt-3.5-turbo"
+    redis_host: "{{
+      (lookup('env', 'VALKEY_FQDN') | default('', true))
+      or (lookup('ini', 'VALKEY_FQDN file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'valkey.yc.internal'
+    }}"
+    redis_port: 6379
+    redis_db: 0
+    redis_password: "{{
+      (lookup('env', 'VALKEY_PASSWORD') | default('', true))
+      or (lookup('ini', 'VALKEY_PASSWORD file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+    celery_broker_url: "{{ 'redis://:' + redis_password + '@' if redis_password else 'redis://' }}{{ redis_host }}:{{ redis_port }}/{{ redis_db }}"
+    celery_backend_url: "{{ 'redis://:' + redis_password + '@' if redis_password else 'redis://' }}{{ redis_host }}:{{ redis_port }}/{{ redis_db }}"
+    clickhouse_host: "{{
+      (lookup('env', 'CLICKHOUSE_HOST') | default('', true))
+      or (lookup('ini', 'CLICKHOUSE_HOST file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'clickhouse.local'
+    }}"
+    clickhouse_port: 8123
+    clickhouse_user: "default"
+    clickhouse_password: "{{
+      (lookup('env', 'CLICKHOUSE_PASSWORD') | default('', true))
+      or (lookup('ini', 'CLICKHOUSE_PASSWORD file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'your-password-here'
+    }}"
+    clickhouse_db: "default"
+    clickhouse_table: "logs"
+    max_page_size: 200
+    max_hard_limit: 5000
+    token_secret: "{{
+      (lookup('env', 'TOKEN_SECRET') | default('', true))
+      or (lookup('ini', 'TOKEN_SECRET file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or 'your-token-here'
+    }}"
+    token_ttl_seconds: 604800
+    chat_ttl_seconds: 1209600
+    # Analytics env vars
+    openrouter_api_key: "ключ"
+    folder_id: ""
+    iam_token: "{{
+      (lookup('env', 'IAM_TOKEN') | default('', true))
+      or (lookup('ini', 'IAM_TOKEN file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+    # Optional: Docker registry auth (used by role's login step)
+    docker_registry: "{{
+      (lookup('env', 'DOCKER_REGISTRY') | default('', true))
+      or (lookup('ini', 'DOCKER_REGISTRY file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+    docker_registry_username: "{{
+      (lookup('env', 'DOCKER_REGISTRY_USERNAME') | default('', true))
+      or (lookup('ini', 'DOCKER_REGISTRY_USERNAME file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+    docker_registry_password: "{{
+      (lookup('env', 'DOCKER_REGISTRY_PASSWORD') | default('', true))
+      or (lookup('ini', 'DOCKER_REGISTRY_PASSWORD file=' + playbook_dir + '/.env type=properties') | default('', true))
+      or ''
+    }}"
+  tasks:
+    - name: Include app role
+      include_role:
+        name: app

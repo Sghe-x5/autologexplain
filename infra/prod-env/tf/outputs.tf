@@ -17,21 +17,21 @@ output "app_private_ips" {
   ])
 }
 
-output "db_endpoints" {
-  description = "PostgreSQL FQDNs"
-  value       = yandex_mdb_postgresql_cluster.db.host[*].fqdn
-}
+# output "db_endpoints" {
+#  description = "PostgreSQL FQDNs"
+#  value       = yandex_mdb_postgresql_cluster.db.host[*].fqdn
+#}
 
 output "redis_endpoints" {
   description = "Redis FQDNs"
   value       = yandex_mdb_redis_cluster.redis.host[*].fqdn
 }
 
-output "db_user_password" {
-  description = "DB user password (store in Secret Manager/Lockbox!)"
-  value       = random_password.db_user.result
-  sensitive   = true
-}
+#output "db_user_password" {
+#  description = "DB user password (store in Secret Manager/Lockbox!)"
+#  value       = random_password.db_user.result
+#  sensitive   = true
+#}
 
 output "redis_password" {
   description = "Redis password (store in Secret Manager/Lockbox!)"
