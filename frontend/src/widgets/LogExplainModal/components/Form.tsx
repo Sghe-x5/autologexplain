@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useController, type Control } from "react-hook-form";
 import { Separator } from "@/components/ui/separator";
 import {
   logFormSchema,
@@ -31,6 +31,7 @@ import { Sparkles } from "lucide-react";
 import { useAutoAnalysisMutation } from "@/api/chatMessagesApi";
 
 import { type FilterData } from "@/api/getFilters";
+import { Textarea } from "@/components/ui/textarea";
 
 const mockData: UserLogExplanation = {
   userId: 123,
@@ -68,11 +69,6 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
   const setAnalysisParams = useLogStore((state) => state.setAnalysisParams);
   const [autoAnalysis, { isLoading: isAnalysisLoading }] =
     useAutoAnalysisMutation();
-
-  const watchProduct = form.watch("product");
-  const watchService = form.watch("service");
-  const watchEnvironment = form.watch("environment");
-  const watchComment = form.watch("comment");
 
   const onSubmit = async (values: LogExplanation) => {
     try {
@@ -116,10 +112,25 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
 
   const isFormDisabled = !form.formState.isValid || form.formState.isSubmitting;
 
-  const productData = filters.find((p) => p.product === watchProduct);
+  // вместо watch — читаем напрямую через useController внутри каждого поля
+  const { field: productField } = useController({
+    name: "product",
+    control: form.control,
+  });
+  const productData = filters.find((p) => p.product === productField.value);
+
+  const { field: serviceField } = useController({
+    name: "service",
+    control: form.control,
+  });
   const serviceData = productData?.services.find(
-    (s) => s.service === watchService
+    (s) => s.service === serviceField.value
   );
+
+  const { field: environmentField } = useController({
+    name: "environment",
+    control: form.control,
+  });
 
   return (
     <Form {...form}>
@@ -128,137 +139,123 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
         className="space-y-6 flex flex-col"
         data-test-id="log-explain-form"
       >
-        <FormField
-          control={form.control}
-          name="product"
-          render={({ field }) => (
-            <FormItem data-test-id="product-select">
-              <FormLabel>Продукт</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  form.setValue("service", "");
-                  form.setValue("environment", "");
-                  form.setValue("startTime", new Date());
-                  form.setValue("endTime", new Date());
-                }}
-                value={field.value}
+        {/* Продукт */}
+        <FormItem data-test-id="product-select">
+          <FormLabel>Продукт</FormLabel>
+          <Select
+            onValueChange={(value) => {
+              productField.onChange(value);
+              form.setValue("service", "");
+              form.setValue("environment", "");
+              form.setValue("startTime", new Date());
+              form.setValue("endTime", new Date());
+            }}
+            value={productField.value}
+          >
+            <FormControl>
+              <SelectTrigger
+                className={`w-full ${interactiveField} cursor-pointer`}
+                data-test-id="product-select-trigger"
               >
-                <FormControl>
-                  <SelectTrigger
-                    className={`w-full ${interactiveField} cursor-pointer`}
-                    data-test-id="product-select-trigger"
+                <SelectValue placeholder="Выберите продукт" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent data-test-id="product-select-options">
+              <SelectGroup>
+                {filters.map((p) => (
+                  <SelectItem
+                    key={p.product}
+                    value={p.product}
+                    className="cursor-pointer"
+                    data-test-id={`product-option-${p.product}`}
                   >
-                    <SelectValue placeholder="Выберите продукт" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent data-test-id="product-select-options">
-                  <SelectGroup>
-                    {filters.map((p) => (
-                      <SelectItem
-                        key={p.product}
-                        value={p.product}
-                        className="cursor-pointer"
-                        data-test-id={`product-option-${p.product}`}
-                      >
-                        {p.product}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                    {p.product}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
 
-        <FormField
-          control={form.control}
-          name="service"
-          render={({ field }) => (
-            <FormItem data-test-id="service-select">
-              <FormLabel>Сервис</FormLabel>
-              <Select
-                disabled={!watchProduct}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  form.setValue("environment", "");
-                  form.setValue("startTime", new Date());
-                  form.setValue("endTime", new Date());
-                }}
-                value={field.value}
+        {/* Сервис */}
+        <FormItem data-test-id="service-select">
+          <FormLabel>Сервис</FormLabel>
+          <Select
+            disabled={!productField.value}
+            onValueChange={(value) => {
+              serviceField.onChange(value);
+              form.setValue("environment", "");
+              form.setValue("startTime", new Date());
+              form.setValue("endTime", new Date());
+            }}
+            value={serviceField.value}
+          >
+            <FormControl>
+              <SelectTrigger
+                className={`w-full ${interactiveField} disabled:cursor-not-allowed [&:not(:disabled)]:cursor-pointer`}
+                data-test-id="service-select-trigger"
               >
-                <FormControl>
-                  <SelectTrigger
-                    className={`w-full ${interactiveField} disabled:cursor-not-allowed [&:not(:disabled)]:cursor-pointer`}
-                    data-test-id="service-select-trigger"
+                <SelectValue placeholder="Выберите сервис" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent data-test-id="service-select-options">
+              <SelectGroup>
+                {productData?.services.map((s) => (
+                  <SelectItem
+                    key={s.service}
+                    value={s.service}
+                    className="cursor-pointer"
+                    data-test-id={`service-option-${s.service}`}
                   >
-                    <SelectValue placeholder="Выберите сервис" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent data-test-id="service-select-options">
-                  <SelectGroup>
-                    {productData?.services.map((s) => (
-                      <SelectItem
-                        key={s.service}
-                        value={s.service}
-                        className="cursor-pointer"
-                        data-test-id={`service-option-${s.service}`}
-                      >
-                        {s.service}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                    {s.service}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
 
-        <FormField
-          control={form.control}
-          name="environment"
-          render={({ field }) => (
-            <FormItem data-test-id="environment-select">
-              <FormLabel>Окружение</FormLabel>
-              <Select
-                disabled={!watchService}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  form.setValue("startTime", new Date());
-                  form.setValue("endTime", new Date());
-                }}
-                value={field.value}
+        {/* Окружение */}
+        <FormItem data-test-id="environment-select">
+          <FormLabel>Окружение</FormLabel>
+          <Select
+            disabled={!serviceField.value}
+            onValueChange={(value) => {
+              environmentField.onChange(value);
+              form.setValue("startTime", new Date());
+              form.setValue("endTime", new Date());
+            }}
+            value={environmentField.value}
+          >
+            <FormControl>
+              <SelectTrigger
+                className={`w-full ${interactiveField} disabled:cursor-not-allowed [&:not(:disabled)]:cursor-pointer`}
+                data-test-id="environment-select-trigger"
               >
-                <FormControl>
-                  <SelectTrigger
-                    className={`w-full ${interactiveField} disabled:cursor-not-allowed [&:not(:disabled)]:cursor-pointer`}
-                    data-test-id="environment-select-trigger"
+                <SelectValue placeholder="Выберите окружение" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent data-test-id="environment-select-options">
+              <SelectGroup>
+                {serviceData?.environments.map((env) => (
+                  <SelectItem
+                    key={env}
+                    value={env}
+                    className="cursor-pointer"
+                    data-test-id={`environment-option-${env}`}
                   >
-                    <SelectValue placeholder="Выберите окружение" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent data-test-id="environment-select-options">
-                  <SelectGroup>
-                    {serviceData?.environments.map((env) => (
-                      <SelectItem
-                        key={env}
-                        value={env}
-                        className="cursor-pointer"
-                        data-test-id={`environment-option-${env}`}
-                      >
-                        {env}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                    {env}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
 
+        {/* Период */}
         <FormItem data-test-id="period-fields">
           <FormLabel>Период</FormLabel>
           <div className="flex gap-4">
@@ -271,7 +268,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                     <div className={interactiveField}>
                       <div
                         className={
-                          !watchEnvironment
+                          !environmentField.value
                             ? "pointer-events-none opacity-50"
                             : ""
                         }
@@ -300,7 +297,7 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
                     <div className={interactiveField}>
                       <div
                         className={
-                          !watchEnvironment
+                          !environmentField.value
                             ? "pointer-events-none opacity-50"
                             : ""
                         }
@@ -323,44 +320,14 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
           </div>
         </FormItem>
 
-        <FormField
-          control={form.control}
-          name="comment"
-          render={({ field }) => (
-            <FormItem data-test-id="comment-field">
-              <FormLabel>Задать вопрос или уточнение AI ассистенту</FormLabel>
-              <FormControl>
-                <textarea
-                  {...field}
-                  disabled={!watchProduct}
-                  maxLength={1000}
-                  placeholder="Например: что означает эта ошибка..."
-                  className={`w-full min-h-[200px] p-2 resize-y ${interactiveField} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  data-test-id="comment-textarea"
-                />
-              </FormControl>
-              <div className="flex justify-end">
-                <p
-                  className={`text-xs ${
-                    watchComment?.length === 1000
-                      ? "text-[#FF0000]"
-                      : "text-[#71717A]"
-                  } mt-1`}
-                  data-test-id="comment-counter"
-                >
-                  {`${watchComment?.length ?? 0}/1000`}
-                </p>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Комментарий */}
+        <CommentField control={form.control} disabled={!productField.value} />
 
         <Separator data-test-id="form-separator" />
 
         <Button
           type="submit"
-          className=" bg-[#2463EB] text-[#FAFAFA] hover:bg-[#1C4ED8] hover:border hover:border-[#1C4ED8] cursor-pointer"
+          className="bg-[#2463EB] text-[#FAFAFA] hover:bg-[#1C4ED8] hover:border hover:border-[#1C4ED8] cursor-pointer"
           disabled={isFormDisabled || isAnalysisLoading}
           data-test-id="analyze-submit-button"
         >
@@ -371,5 +338,49 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
     </Form>
   );
 };
+
+/** Вынесенное поле комментария */
+function CommentField({
+  control,
+  disabled,
+}: {
+  control: Control<LogExplanation>;
+  disabled: boolean;
+}) {
+  const { field } = useController({ name: "comment", control });
+  const charCount = field.value?.length ?? 0;
+  const percent = Math.min((charCount / 1000) * 100, 100);
+  const counterColor =
+    percent >= 100
+      ? "text-red-500"
+      : percent >= 80
+      ? "text-yellow-500"
+      : "text-muted-foreground";
+
+  return (
+    <FormItem data-test-id="comment-field">
+      <FormLabel>Задать вопрос или уточнение AI ассистенту</FormLabel>
+      <FormControl>
+        <Textarea
+          {...field}
+          disabled={disabled}
+          maxLength={1000}
+          placeholder="Например: что означает эта ошибка..."
+          className="min-h-[200px] max-h-[300px] resize-y"
+          data-test-id="comment-textarea"
+        />
+      </FormControl>
+      <div className="flex items-center justify-between mt-1">
+        <span
+          className={`text-xs ml-auto ${counterColor}`}
+          data-test-id="comment-counter"
+        >
+          {charCount}/1000
+        </span>
+      </div>
+      <FormMessage />
+    </FormItem>
+  );
+}
 
 export { LogExplainForm };
