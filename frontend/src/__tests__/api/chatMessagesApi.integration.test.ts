@@ -1,232 +1,150 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { configureStore } from "@reduxjs/toolkit";
+import { setupListeners } from "@reduxjs/toolkit/query";
 import { chatMessagesApi } from "@/api/chatMessagesApi";
+import { wsRegistry } from "@/lib/model/wsRegistry";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-describe("chatMessagesApi Integration Tests", () => {
+class MockWebSocket {
+  static OPEN = 1;
+  readyState = MockWebSocket.OPEN;
+  sent: string[] = [];
+
+  send(msg: string) {
+    this.sent.push(msg);
+  }
+
+  close() {
+    this.readyState = 0;
+  }
+}
+(globalThis as any).WebSocket = MockWebSocket;
+
+(globalThis as any).WebSocket = MockWebSocket;
+
+vi.stubGlobal("crypto", {
+  randomUUID: () => "uuid-123",
+});
+
+describe("chatMessagesApi (integration)", () => {
+  let store: ReturnType<typeof makeStore>;
+
+  function makeStore() {
+    return configureStore({
+      reducer: {
+        [chatMessagesApi.reducerPath]: chatMessagesApi.reducer,
+      },
+      middleware: (gDM) => gDM().concat(chatMessagesApi.middleware),
+    });
+  }
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    global.fetch = vi.fn();
+    wsRegistry.clear();
+    store = makeStore();
+    setupListeners(store.dispatch);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  it("analysisStart → отправляет сообщение в WebSocket", async () => {
+    const ws = new MockWebSocket();
+    wsRegistry.set("c1", ws as any);
 
-  describe("Структура API", () => {
-    it("должен иметь правильную конфигурацию всех endpoints", () => {
-      expect(chatMessagesApi.endpoints.analysisStart).toBeDefined();
-      expect(chatMessagesApi.endpoints.autoAnalysis).toBeDefined();
-      expect(chatMessagesApi.endpoints.chatTurn).toBeDefined();
+    const res = await store
+      .dispatch(
+        chatMessagesApi.endpoints.analysisStart.initiate({
+          chatId: "c1",
+          payload: {
+            filters: {
+              start_date: "2024-01-01",
+              end_date: "2024-02-01",
+              service: "svc",
+            },
+            prompt: "test prompt",
+          },
+        })
+      )
+      .unwrap();
 
-      expect(chatMessagesApi.endpoints.analysisStart.name).toBe(
-        "analysisStart"
-      );
-      expect(chatMessagesApi.endpoints.autoAnalysis.name).toBe("autoAnalysis");
-      expect(chatMessagesApi.endpoints.chatTurn.name).toBe("chatTurn");
-    });
-
-    it("должен иметь правильные типы данных для всех endpoints", () => {
-      const analysisStartEndpoint = chatMessagesApi.endpoints.analysisStart;
-      const autoAnalysisEndpoint = chatMessagesApi.endpoints.autoAnalysis;
-      const chatTurnEndpoint = chatMessagesApi.endpoints.chatTurn;
-
-      expect(analysisStartEndpoint).toHaveProperty("name");
-      expect(autoAnalysisEndpoint).toHaveProperty("name");
-      expect(chatTurnEndpoint).toHaveProperty("name");
-    });
-  });
-
-  describe("Конфигурация endpoints", () => {
-    it("должен иметь правильный reducerPath", () => {
-      expect(chatMessagesApi.reducerPath).toBe("chatMessagesApi");
-    });
-
-    it("должен иметь правильную структуру", () => {
-      expect(chatMessagesApi).toHaveProperty("endpoints");
-    });
-
-    it("должен иметь все необходимые endpoints", () => {
-      const endpoints = Object.keys(chatMessagesApi.endpoints);
-      expect(endpoints).toContain("analysisStart");
-      expect(endpoints).toContain("autoAnalysis");
-      expect(endpoints).toContain("chatTurn");
-      expect(endpoints).toHaveLength(3);
+    expect(res).toEqual({ enqueued: true, request_id: "uuid-123" });
+    expect(ws.sent.length).toBe(1);
+    expect(JSON.parse(ws.sent[0])).toMatchObject({
+      type: "analysis_start",
+      prompt: "test prompt",
     });
   });
 
-  describe("Валидация структуры analysisStart endpoint", () => {
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatMessagesApi.endpoints.analysisStart;
+  it("analysisStart → ошибка если WebSocket закрыт", async () => {
+    const ws = new MockWebSocket();
+    ws.readyState = 0;
+    wsRegistry.set("c2", ws as any);
 
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильное имя", () => {
-      const endpoint = chatMessagesApi.endpoints.analysisStart;
-      expect(endpoint.name).toBe("analysisStart");
-    });
-
-    it("должен быть определен", () => {
-      const endpoint = chatMessagesApi.endpoints.analysisStart;
-      expect(endpoint).toBeDefined();
-    });
-  });
-
-  describe("Валидация структуры autoAnalysis endpoint", () => {
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatMessagesApi.endpoints.autoAnalysis;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильное имя", () => {
-      const endpoint = chatMessagesApi.endpoints.autoAnalysis;
-      expect(endpoint.name).toBe("autoAnalysis");
-    });
-
-    it("должен быть определен", () => {
-      const endpoint = chatMessagesApi.endpoints.autoAnalysis;
-      expect(endpoint).toBeDefined();
+    await expect(
+      store
+        .dispatch(
+          chatMessagesApi.endpoints.analysisStart.initiate({
+            chatId: "c2",
+            payload: {
+              filters: { start_date: "x", end_date: "y", service: "s" },
+              prompt: "zzz",
+            },
+          })
+        )
+        .unwrap()
+    ).rejects.toEqual({
+      status: "CUSTOM_ERROR",
+      error: "WebSocket connection closed",
     });
   });
 
-  describe("Валидация структуры chatTurn endpoint", () => {
-    it("должен иметь правильные свойства", () => {
-      const endpoint = chatMessagesApi.endpoints.chatTurn;
+  it("chatTurn → отправляет сообщение в WebSocket", async () => {
+    const ws = new MockWebSocket();
+    wsRegistry.set("c3", ws as any);
 
-      expect(endpoint).toHaveProperty("name");
-    });
+    const res = await store
+      .dispatch(
+        chatMessagesApi.endpoints.chatTurn.initiate({
+          chatId: "c3",
+          content: "hello",
+        })
+      )
+      .unwrap();
 
-    it("должен иметь правильное имя", () => {
-      const endpoint = chatMessagesApi.endpoints.chatTurn;
-      expect(endpoint.name).toBe("chatTurn");
-    });
-
-    it("должен быть определен", () => {
-      const endpoint = chatMessagesApi.endpoints.chatTurn;
-      expect(endpoint).toBeDefined();
-    });
-  });
-
-  describe("Проверка типов данных", () => {
-    it("должен иметь правильные типы для analysisStart", () => {
-      const endpoint = chatMessagesApi.endpoints.analysisStart;
-
-      expect(endpoint).toBeDefined();
-      expect(typeof endpoint.name).toBe("string");
-      expect(endpoint.name).toBe("analysisStart");
-    });
-
-    it("должен иметь правильные типы для autoAnalysis", () => {
-      const endpoint = chatMessagesApi.endpoints.autoAnalysis;
-
-      expect(endpoint).toBeDefined();
-      expect(typeof endpoint.name).toBe("string");
-      expect(endpoint.name).toBe("autoAnalysis");
-    });
-
-    it("должен иметь правильные типы для chatTurn", () => {
-      const endpoint = chatMessagesApi.endpoints.chatTurn;
-
-      expect(endpoint).toBeDefined();
-      expect(typeof endpoint.name).toBe("string");
-      expect(endpoint.name).toBe("chatTurn");
+    expect(res).toEqual({ enqueued: true, request_id: "uuid-123" });
+    expect(JSON.parse(ws.sent[0])).toMatchObject({
+      type: "chat_turn",
+      content: "hello",
     });
   });
 
-  describe("Проверка конфигурации", () => {
-    it("должен использовать правильную конфигурацию", () => {
-      expect(chatMessagesApi).toBeDefined();
-      expect(chatMessagesApi.reducerPath).toBe("chatMessagesApi");
-    });
+  it("autoAnalysis → успешный POST /chats/new", async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ chat_id: "c-new", token: "tok" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
 
-    it("должен иметь правильную структуру API", () => {
-      expect(chatMessagesApi).toHaveProperty("reducerPath");
-      expect(chatMessagesApi).toHaveProperty("endpoints");
-    });
-  });
+    const res = await store
+      .dispatch(chatMessagesApi.endpoints.autoAnalysis.initiate())
+      .unwrap();
 
-  describe("Проверка экспортируемых хуков", () => {
-    it("должен экспортировать правильные endpoints", () => {
-      expect(chatMessagesApi.endpoints.analysisStart).toBeDefined();
-      expect(chatMessagesApi.endpoints.autoAnalysis).toBeDefined();
-      expect(chatMessagesApi.endpoints.chatTurn).toBeDefined();
-    });
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain("/chats/new");
+    expect(init.method).toBe("POST");
 
-    it("должен иметь правильные имена endpoints", () => {
-      expect(chatMessagesApi.endpoints.analysisStart.name).toBe(
-        "analysisStart"
-      );
-      expect(chatMessagesApi.endpoints.autoAnalysis.name).toBe("autoAnalysis");
-      expect(chatMessagesApi.endpoints.chatTurn.name).toBe("chatTurn");
+    expect(res).toEqual({
+      chatId: "c-new",
+      token: "tok",
+      request_id: "uuid-123",
     });
   });
 
-  describe("Проверка структуры endpoints", () => {
-    it("должен иметь правильную структуру для analysisStart", () => {
-      const endpoint = chatMessagesApi.endpoints.analysisStart;
-      expect(endpoint).toHaveProperty("name");
-    });
+  it("autoAnalysis → ошибка при неуспешном POST", async () => {
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response("internal error", { status: 500 })
+    );
 
-    it("должен иметь правильную структуру для autoAnalysis", () => {
-      const endpoint = chatMessagesApi.endpoints.autoAnalysis;
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильную структуру для chatTurn", () => {
-      const endpoint = chatMessagesApi.endpoints.chatTurn;
-      expect(endpoint).toHaveProperty("name");
-    });
-  });
-
-  describe("Проверка метаданных", () => {
-    it("должен иметь правильные метаданные для analysisStart", () => {
-      const endpoint = chatMessagesApi.endpoints.analysisStart;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильные метаданные для autoAnalysis", () => {
-      const endpoint = chatMessagesApi.endpoints.autoAnalysis;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-
-    it("должен иметь правильные метаданные для chatTurn", () => {
-      const endpoint = chatMessagesApi.endpoints.chatTurn;
-
-      expect(endpoint).toHaveProperty("name");
-    });
-  });
-
-  describe("Проверка WebSocket интеграции", () => {
-    it("должен иметь endpoints для WebSocket сообщений", () => {
-      const analysisStartEndpoint = chatMessagesApi.endpoints.analysisStart;
-      const chatTurnEndpoint = chatMessagesApi.endpoints.chatTurn;
-
-      expect(analysisStartEndpoint).toBeDefined();
-      expect(chatTurnEndpoint).toBeDefined();
-      expect(analysisStartEndpoint.name).toBe("analysisStart");
-      expect(chatTurnEndpoint.name).toBe("chatTurn");
-    });
-
-    it("должен иметь endpoint для автоматического анализа", () => {
-      const autoAnalysisEndpoint = chatMessagesApi.endpoints.autoAnalysis;
-
-      expect(autoAnalysisEndpoint).toBeDefined();
-      expect(autoAnalysisEndpoint.name).toBe("autoAnalysis");
-    });
-
-    it("должен поддерживать все типы WebSocket операций", () => {
-      const endpoints = [
-        chatMessagesApi.endpoints.analysisStart,
-        chatMessagesApi.endpoints.autoAnalysis,
-        chatMessagesApi.endpoints.chatTurn,
-      ];
-
-      endpoints.forEach((endpoint) => {
-        expect(endpoint).toBeDefined();
-        expect(endpoint).toHaveProperty("name");
-        expect(typeof endpoint.name).toBe("string");
-      });
-    });
+    await expect(
+      store.dispatch(chatMessagesApi.endpoints.autoAnalysis.initiate()).unwrap()
+    ).rejects.toThrow(/Failed to create chat: 500 internal error/);
   });
 });
