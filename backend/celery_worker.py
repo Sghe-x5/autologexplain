@@ -1,6 +1,6 @@
 from typing import Any
 
-from celery import Celery
+from celery import Celery # type: ignore[import-untyped]
 from loguru import logger
 
 from core.config import CELERY_BACKEND_URL, CELERY_BROKER_URL

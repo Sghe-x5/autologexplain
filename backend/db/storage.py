@@ -43,9 +43,9 @@ def add_message(chat_id: str, role: str, content: str, meta: dict | None = None)
 
 def list_messages(chat_id: str, limit: int = 50) -> list[dict]:
     key = f"chat:{chat_id}:messages"
-    length = _r.llen(key)
+    length = cast(int, _r.llen(key))
     start = max(0, length - limit)
-    raws = _r.lrange(key, start, -1)
+    raw = cast(List[str], _r.lrange(key, start, length))
     out: list[dict] = []
     for raw in raws:
         try:
