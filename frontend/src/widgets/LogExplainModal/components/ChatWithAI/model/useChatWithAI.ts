@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WS_BASE } from "@/consts/api.const";
 import type { ChatItem } from "@/lib/chat.schemas";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "@/lib/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/lib/store";
 import { clearAnalysisParams as clearAnalysisParamsAction } from "../../../model/logExplainSlice";
 import { wsRegistry } from "@/lib/model/wsRegistry";
 import {
@@ -15,6 +15,8 @@ import {
 // ключи для localStorage / cookie
 const LS_MESSAGES_KEY = "chat_messages";
 const COOKIE_CHAT_KEY = "chat_session"; // chat_id + token JSON
+const EPHEMERAL_START_TEXT = "Начинаю анализ логов...";
+const EPHEMERAL_START_ID = "analysis-start";
 
 // утилита работы с куками
 function setCookie(name: string, value: string, days = 7) {
@@ -56,6 +58,9 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
   const [autoAnalysis] = useAutoAnalysisMutation();
   const [isInitializing, setIsInitializing] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+  const isAnalysisActive = useSelector(
+    (state: RootState) => state.logExplain.isAnalysisActive
+  );
 
   const [chat, setChat] = useState<{ chatId: string; token: string } | null>(
     () => {
@@ -69,9 +74,10 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
   const initializationRef = useRef(false);
   const seenIdsRef = useRef<Set<string>>(new Set());
 
-  // сохраняем messages в localStorage
+  // сохраняем messages в localStorage (без эфемерного стартового сообщения)
   useEffect(() => {
-    localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(messages));
+    const toSave = messages.filter((m) => m.id !== EPHEMERAL_START_ID);
+    localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(toSave));
   }, [messages]);
 
   // сохраняем chat в cookie
@@ -94,9 +100,9 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
     };
   }, [chat]);
 
-  // сброс состояния если autoAnalysisParams убрали
+  // сброс состояния только если нет активного анализа и нет чата
   useEffect(() => {
-    if (autoAnalysisParams === undefined) {
+    if (autoAnalysisParams === undefined && !isAnalysisActive && !chat) {
       setMessages([]);
       localStorage.removeItem(LS_MESSAGES_KEY);
       setInput("");
@@ -104,7 +110,7 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
       setIsInitializing(false);
       seenIdsRef.current = new Set();
     }
-  }, [autoAnalysisParams]);
+  }, [autoAnalysisParams, isAnalysisActive, chat]);
 
   useEffect(() => {
     if (autoAnalysisParams !== undefined) {
@@ -124,12 +130,12 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
 
           setMessages([
             {
-              id: crypto.randomUUID(),
+              id: EPHEMERAL_START_ID,
               role: "assistant",
-              text: "Начинаю анализ логов...",
+              text: EPHEMERAL_START_TEXT,
             } as ChatItem,
           ]);
-          seenIdsRef.current.add("analysis-start");
+          seenIdsRef.current.add(EPHEMERAL_START_ID);
           setIsAssistantTyping(true);
         } catch {
           setMessages([
@@ -200,10 +206,16 @@ export function useChatWithAI({ autoAnalysisParams }: UseChatWithAIParams) {
 
       if (fresh.length) {
         fresh.forEach((m) => seen.add(m.id));
-        if (fresh.some((m) => m.role === "assistant")) {
+        const hasAssistant = fresh.some((m) => m.role === "assistant");
+        if (hasAssistant) {
           setIsAssistantTyping(false);
         }
-        setMessages((prev) => [...prev, ...fresh]);
+        setMessages((prev) => {
+          const base = hasAssistant
+            ? prev.filter((m) => m.id !== EPHEMERAL_START_ID)
+            : prev;
+          return [...base, ...fresh];
+        });
       }
     }
   }, [data]);
