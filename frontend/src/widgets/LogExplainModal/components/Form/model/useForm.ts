@@ -46,19 +46,33 @@ export function useFormLogic(filters: FilterData[]) {
     !form.formState.isValid || form.formState.isSubmitting || isAnalysisLoading;
 
   const onProductChange = (value: string) => {
-    form.reset({
-      ...form.getValues(),
-      product: value,
-      service: "",
-      environment: "",
+    form.setValue("product", value, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: false,
+    });
+    form.setValue("service", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: false,
+    });
+    form.setValue("environment", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: false,
     });
   };
 
   const onServiceChange = (value: string) => {
-    form.reset({
-      ...form.getValues(),
-      service: value,
-      environment: "",
+    form.setValue("service", value, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: false,
+    });
+    form.setValue("environment", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: false,
     });
   };
 
