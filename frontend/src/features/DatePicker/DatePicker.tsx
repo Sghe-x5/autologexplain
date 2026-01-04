@@ -74,7 +74,7 @@ export default function DatePicker({ label }: DatePickerProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto overflow-hidden p-0"
+            className="flex w-auto overflow-hidden border p-0 bg-white dark:bg-gray-800"
             align="end"
             alignOffset={-8}
             sideOffset={10}
@@ -86,8 +86,11 @@ export default function DatePicker({ label }: DatePickerProps) {
               month={month}
               onMonthChange={setMonth}
               onSelect={handleDateChange}
+              className="border-r"
             />
-            <TimePicker value={time} onChange={handleTimeChange} />
+            <div className="flex flex-col">
+              <TimePicker value={time} onChange={handleTimeChange} />
+            </div>
           </PopoverContent>
         </Popover>
       </div>
