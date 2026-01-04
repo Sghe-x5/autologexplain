@@ -5,7 +5,8 @@ import showModalReducer from "@/widgets/LogExplainModal/model/showModalSlice";
 import { LogExplainBtn } from "@/widgets/LogExplainModal/components/LogExplainBtn";
 import { describe, it, expect } from "vitest";
 
-const getByTestIdAttr = (id: string) => document.querySelector(`[data-test-id="${id}"]`);
+const getByTestIdAttr = (id: string) =>
+  document.querySelector(`[data-test-id="${id}"]`);
 
 describe("LogExplainBtn", () => {
   const setup = (isShown = false) => {
@@ -44,7 +45,7 @@ describe("LogExplainBtn", () => {
     );
 
     const btn = getByTestIdAttr("open-modal-button");
-    btn && fireEvent.click(btn);
+    if (btn) fireEvent.click(btn);
     expect(store.getState().showModal.isShown).toBe(true);
   });
 });
