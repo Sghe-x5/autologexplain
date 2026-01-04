@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+clickhouse-connect
+pydantic
+python-dotenv
+
+# Для тестирования
+pytest
+pytest-anyio
+httpx
