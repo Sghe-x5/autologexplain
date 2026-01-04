@@ -40,7 +40,7 @@ export default function DatePicker({ label, value, onChange }: DatePickerProps) 
     setInternalDate(undefined)
     setTime(undefined)
     setFormattedValue("")
-    onChange?.(undefined as any) // form.reset() triggers this
+    onChange?.(undefined as any)
     setOpen(false)
   }
 

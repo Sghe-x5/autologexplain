@@ -2,8 +2,10 @@ import * as z from "zod";
 
 export const logFormSchema = z
   .object({
+    product: z.string().nonempty("Выберите продукт"),
     service: z.string().nonempty("Выберите сервис"),
-    userID: z.string().min(1, "Введите имя пользователя"),
+    environment: z.string().nonempty("Выберите окружение"),
+    // userID: z.string().min(1, "Введите имя пользователя"), // временно отключено
     startTime: z.date(),
     endTime: z.date(),
   })
@@ -20,8 +22,7 @@ export const logFormSchema = z
     path: ["endTime"],
   });
 
-type LogExplanation = z.infer<typeof logFormSchema>;
-export type { LogExplanation };
+export type LogExplanation = z.infer<typeof logFormSchema>;
 
 export interface UserLogExplanation {
   userId: number;
