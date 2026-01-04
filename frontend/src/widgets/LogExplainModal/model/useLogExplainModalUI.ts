@@ -18,14 +18,18 @@ export function useLogExplainModalUI() {
   const deleteCookie = (name: string) => {
     try {
       document.cookie = `${name}=; Max-Age=0; path=/`;
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const onClose = () => dispatch(close());
   const onReset = () => {
     try {
       localStorage.removeItem(LS_MESSAGES_KEY);
-    } catch {}
+    } catch {
+      // ignore
+    }
     deleteCookie(COOKIE_CHAT_KEY);
     dispatch(resetAnalysis());
   };
