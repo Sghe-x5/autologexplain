@@ -64,7 +64,7 @@ def get_unique_status_codes():
     result = sql_query(sql)
     if not result:
         raise HTTPException(status_code=404, detail="No status codes found")
-    return UniqueList(items=[row["status_code"] for row in result])
+    return UniqueList(items=[str(row["status_code"]) for row in result])
 
 
 @app.get("/logs/options", response_model=FilterOptions)
@@ -87,7 +87,7 @@ def get_filter_options():
             trace_ids = fetch("trace_id"),
             ip_addresses = fetch("ip_address"),
             methods = fetch("method"),
-            status_codes = fetch("status_code"),
+            status_codes = [str(x) for x in fetch("status_code")],
             url_paths = fetch("url_path"),
         )
     except KeyError:

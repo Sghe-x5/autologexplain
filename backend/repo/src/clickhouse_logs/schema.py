@@ -13,11 +13,11 @@ class LogRecord(BaseModel):
     user_id: Optional[str] = None
     ip_address: Optional[str] = None
     method: Optional[str] = None
-    status_code: Optional[int] = None
+    status_code: Optional[str] = None
     http_referer: Optional[str] = None
     user_agent: Optional[str] = None
     response_bytes: Optional[int] = None
-    latency_ms: Optional[int] = None
+    latency_ms: Optional[str] = None
     message: Optional[str] = None
     stack_trace: Optional[str] = None
     metadata: Optional[dict] = None
@@ -34,7 +34,7 @@ class SearchQuery(BaseModel):
     span_id: Optional[str] = Field(None, description="Filter by span ID")
     ip_address: Optional[str] = Field(None, description="Filter by IP address")
     method: Optional[str] = Field(None, description="Filter by HTTP method")
-    status_code: Optional[int] = Field(None, description="Filter by HTTP status code")
+    status_code: Optional[str] = Field(None, description="Filter by HTTP status code")
     url_path: Optional[str] = Field(None, description="Filter by URL path")
     message: Optional[str] = Field(None, description="Filter by log message")
     latency_ms: Optional[int] = Field(None, description="Filter by latency in milliseconds")
@@ -43,7 +43,7 @@ class SearchQuery(BaseModel):
     page_size: int = Field(50, ge=1, le=100, description="Number of records per page for pagination")
 
 class UniqueList(BaseModel):
-    items: List[int]
+    items: List[str]
 
 class FilterOptions(BaseModel):
     dates: List[date]

@@ -1,0 +1,1 @@
+INSERT INTO logs FORMAT CSVWithNames
