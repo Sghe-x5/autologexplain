@@ -33,6 +33,8 @@ def _unb64(s: str) -> bytes:
 def issue_chat_token(chat_id: str, ttl_seconds: int | None = None) -> str:
     if ttl_seconds is None:
         ttl_seconds = int(get_settings().TOKEN_TTL_SECONDS)
+    if ttl_seconds <= 0:
+        raise TokenSecretError
     now = int(time.time())
     payload = {"chat_id": chat_id, "iat": now, "exp": now + int(ttl_seconds)}
     p_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
