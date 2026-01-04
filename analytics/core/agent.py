@@ -3,6 +3,7 @@ from langchain.memory import ConversationBufferWindowMemory
 from langchain.prompts import BasePromptTemplate, PromptTemplate
 from langchain.tools.render import render_text_description
 from langchain_community.chat_models.yandex import ChatYandexGPT
+from pydantic import SecretStr
 
 from analytics.core.tools.profiler_tool import data_profiler
 from analytics.core.tools.specialized_tools import python_code_interpreter, trace_retriever
@@ -26,16 +27,16 @@ def create_log_agent() -> AgentExecutor:
 
     if YC_IAM_TOKEN:
         llm = ChatYandexGPT(
-            iam_token=YC_IAM_TOKEN,
-            folder_id=YC_FOLDER_ID,
+            iam_token=SecretStr(YC_IAM_TOKEN),
+            folder_id=YC_FOLDER_ID or "",
             model_name=LLM_MODEL_NAME,
             temperature=0.0,
             max_tokens=4096,
         )
     elif YC_API_KEY:
         llm = ChatYandexGPT(
-            api_key=YC_API_KEY,
-            folder_id=YC_FOLDER_ID,
+            api_key=SecretStr(YC_API_KEY),
+            folder_id=YC_FOLDER_ID or "",
             model_name=LLM_MODEL_NAME,
             temperature=0.0,
             max_tokens=4096,
