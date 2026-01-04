@@ -9,10 +9,7 @@ from dotenv import load_dotenv
 from yandex.cloud.iam.v1.iam_token_service_pb2 import CreateIamTokenRequest
 from yandex.cloud.iam.v1.iam_token_service_pb2_grpc import IamTokenServiceStub
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +34,7 @@ class YandexCloudTokenManager:
         config = {
             "id": os.getenv("YC_KEY_ID"),
             "service_account_id": os.getenv("YC_SERVICE_ACCOUNT_ID"),
-            "private_key": os.getenv("YC_PRIVATE_KEY")
+            "private_key": os.getenv("YC_PRIVATE_KEY"),
         }
 
         if not all(config.values()):
@@ -58,17 +55,17 @@ class YandexCloudTokenManager:
         """
         now = int(time.time())
         payload = {
-            'aud': 'https://iam.api.cloud.yandex.net/iam/v1/tokens',
-            'iss': self.service_account_key["service_account_id"],
-            'iat': now,
-            'exp': now + 3600  # Токен действителен 1 час
+            "aud": "https://iam.api.cloud.yandex.net/iam/v1/tokens",
+            "iss": self.service_account_key["service_account_id"],
+            "iat": now,
+            "exp": now + 3600,  # Токен действителен 1 час
         }
 
         return jwt.encode(
             payload,
             self.service_account_key["private_key"],
-            algorithm='PS256',
-            headers={'kid': self.service_account_key["id"]}
+            algorithm="PS256",
+            headers={"kid": self.service_account_key["id"]},
         )
 
     def _request_iam_token(self) -> str:
