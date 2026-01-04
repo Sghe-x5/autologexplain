@@ -1,4 +1,4 @@
-export const FILTERS = [
+export const FILTERS_MOCK = [
   {
     "product": "yandex-go",
     "services": [
