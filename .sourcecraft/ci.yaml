@@ -78,7 +78,8 @@ tasks:
               --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
               --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
               --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
-              --push .
+              --push \
+              .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -114,7 +115,8 @@ tasks:
               --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
               --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
               --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
-              --push .
+              --push \
+              .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -150,7 +152,8 @@ tasks:
               --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
               --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
               --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
-              --push .
+              --push \
+              .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
