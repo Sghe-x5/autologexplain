@@ -1,75 +1,54 @@
-from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferWindowMemory
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
+from langchain.prompts import BasePromptTemplate, PromptTemplate
+from langchain.tools.render import render_text_description
+from langchain_community.chat_models.yandex import ChatYandexGPT
 
 from core.tools.profiler_tool import data_profiler
 from core.tools.specialized_tools import python_code_interpreter, trace_retriever
 from core.tools.sql_query_tool import safe_sql_query_executor
-from utils.config import LLM_MODEL_NAME, OPENROUTER_API_KEY
+from utils.config import LLM_MODEL_NAME, SYSTEM_PROMT, YC_API_KEY, YC_FOLDER_ID, YC_IAM_TOKEN
 
 
 def create_log_agent() -> AgentExecutor:
-    # <<< ИЗМЕНЕНИЕ: Добавляем новый инструмент в арсенал
     tools = [
         safe_sql_query_executor,
-        data_profiler,  # Новый "орган чувств" агента
+        data_profiler,
         trace_retriever,
         python_code_interpreter,
     ]
 
-    llm = ChatOpenAI(
-        model=LLM_MODEL_NAME,
-        api_key=OPENROUTER_API_KEY,
-        base_url="https://openrouter.ai/api/v1",
-        temperature=0.0,
-        max_tokens=4096,
-        default_headers={
-            "HTTP-Referer": "http://localhost:3000",
-            "X-Title": "LogSentry AI Agent",
-        },
+    if YC_IAM_TOKEN:
+        llm = ChatYandexGPT(
+            iam_token=YC_IAM_TOKEN,
+            folder_id=YC_FOLDER_ID,
+            model_name=LLM_MODEL_NAME,
+            temperature=0.0,
+            max_tokens=4096,
+        )
+    elif YC_API_KEY:
+        llm = ChatYandexGPT(
+            api_key=YC_API_KEY,
+            folder_id=YC_FOLDER_ID,
+            model_name=LLM_MODEL_NAME,
+            temperature=0.0,
+            max_tokens=4096,
+        )
+    else:
+        raise ValueError("Не найдены ни YC_IAM_TOKEN, ни YC_API_KEY в файле .env")
+
+    system_prompt = SYSTEM_PROMT
+
+    prompt: BasePromptTemplate = PromptTemplate.from_template(system_prompt)
+
+    prompt = prompt.partial(
+        tools=render_text_description(tools),
+        tool_names=", ".join([t.name for t in tools]),
     )
 
-    # <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: Новый, более умный системный промпт
-    system_prompt = """
-    Ты — LogSentry, элитный SQL-аналитик-детектив. Твоя задача — не просто писать SQL, а проводить расследования, чтобы найти точный ответ на вопрос пользователя. Ты работаешь с таблицей `logs` в ClickHouse.
+    agent = create_react_agent(llm, tools, prompt)
 
-    **Ключевые колонки:** `timestamp`, `product`, `service`, `environment`, `level`, `status_code`, `latency_ms`, `message`, `trace_id`.
-
-    **ТВОЙ РАБОЧИЙ ПРОЦЕСС (МЫСЛИ КАК ДЕТЕКТИВ):**
-
-    1.  **ОПТИМИСТИЧНАЯ ПОПЫТКА:** Сначала напиши SQL-запрос, чтобы ответить на вопрос пользователя, и выполни его с помощью `safe-sql-query-executor`. ВСЕГДА используй `LIMIT`.
-
-    2.  **АНАЛИЗ УЛИК (РЕЗУЛЬТАТА):**
-        *   **Если получил данные:** Отлично! Проанализируй их и дай ответ пользователю.
-        *   **Если получил ошибку SQL:** Прочти текст ошибки, исправь синтаксис своего SQL и попробуй снова.
-        *   **Если получил ПУСТОЙ РЕЗУЛЬТАТ:** ЭТО НЕ КОНЕЦ, ЭТО УЛИКА! Не сдавайся. Твоя первая гипотеза должна быть: "Я использовал неверное значение в условии WHERE".
-
-    3.  **СБОР ДОПОЛНИТЕЛЬНЫХ ДАННЫХ:**
-        *   Чтобы проверить свою гипотезу, используй инструмент `data-profiler`. Например, если ты написал `WHERE level = 'error'` и получил пустой результат, вызови `data_profiler` с `column_name='level'`.
-        *   Инструмент вернет тебе РЕАЛЬНЫЕ значения из базы данных (например, `['INFO', 'ERROR', 'WARN']`).
-
-    4.  **КОРРЕКЦИЯ И ПОВТОРНАЯ ПОПЫТКА:**
-        *   Сравнив свой запрос с реальными данными, ты увидишь свою ошибку (например, что нужно было писать 'ERROR', а не 'error').
-        *   Напиши ИСПРАВЛЕННЫЙ SQL-запрос и выполни его снова с помощью `safe-sql-query-executor`.
-
-    5.  **ФИНАЛЬНЫЙ ВЫВОД:**
-        *   Только если и твоя вторая, исправленная попытка вернула пустой результат, ты можешь с уверенностью сказать пользователю, что таких данных нет.
-
-    Твоя ценность — в твоей настойчивости и способности исправлять собственные ошибки на основе данных. Действуй.
-    """
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ]
-    )
-
-    memory = ConversationBufferWindowMemory(k=5, memory_key="chat_history", return_messages=True)
-    agent = create_openai_tools_agent(llm, tools, prompt)
+    memory = ConversationBufferWindowMemory(k=5, memory_key="chat_history", return_messages=False)
 
     agent_executor = AgentExecutor(
         agent=agent,
