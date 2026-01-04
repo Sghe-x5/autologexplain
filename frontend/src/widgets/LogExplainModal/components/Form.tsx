@@ -95,8 +95,8 @@ const LogExplainForm = () => {
               </FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Выберите сервис для анализа" />
+                  <SelectTrigger className="w-full" data-test-id="analised-service-select">
+                    <SelectValue placeholder="Выберите сервис для анализа" data-test-id="selected-service-span"/>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -134,7 +134,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время начала</FormLabel>
                   <FormControl>
-                    <DatePicker label={""} />
+                    <DatePicker label="" value={field.value} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -147,7 +147,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время окончания</FormLabel>
                   <FormControl>
-                    <DatePicker label={""} />
+                    <DatePicker label="" value={field.value} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -164,7 +164,7 @@ const LogExplainForm = () => {
               <FormLabel>
                 <User /> ID пользователя
               </FormLabel>
-              <FormControl>
+              <FormControl  data-test-id="identifier-input">
                 <Input
                   placeholder="Введите userId, sessionId или идентификатор"
                   {...field}
@@ -177,8 +177,9 @@ const LogExplainForm = () => {
 
         <Separator />
 
-        <div className="flex  gap-2">
+        <div className="flex gap-2">
           <Button
+            data-test-id="analyse-logs-button"
             type="submit"
             className="flex-11/12"
             disabled={!form.formState.isValid || form.formState.isSubmitting}
@@ -186,6 +187,7 @@ const LogExplainForm = () => {
             Анализировать логи
           </Button>
           <Button
+            data-test-id="reset-form-button"
             type="button"
             className="flex-1/12"
             variant="secondary"

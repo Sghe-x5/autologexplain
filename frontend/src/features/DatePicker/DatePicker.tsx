@@ -12,86 +12,80 @@ import {
 } from "@/components/ui/popover"
 import TimePicker from "../TimePicker/TimePicker"
 
-export default function DatePicker({ label }: DatePickerProps) {
+export default function DatePicker({ label, value, onChange }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [date, setDate] = React.useState<Date | undefined>(undefined)
-  const [month, setMonth] = React.useState<Date | undefined>(undefined)
-  const [time, setTime] = React.useState<{ hours: number; minutes: number } | undefined>(undefined)
-  const [value, setValue] = React.useState("")
+  const [internalDate, setInternalDate] = React.useState<Date | undefined>(value)
+  const [month, setMonth] = React.useState<Date | undefined>(value)
+  const [time, setTime] = React.useState<{ hours: number; minutes: number } | undefined>(
+    value ? { hours: value.getHours(), minutes: value.getMinutes() } : undefined
+  )
+  const [formattedValue, setFormattedValue] = React.useState("")
+
+  React.useEffect(() => {
+    if (value) {
+      setInternalDate(value)
+      setTime({ hours: value.getHours(), minutes: value.getMinutes() })
+      setFormattedValue(formatDateWithTime(value, {
+        hours: value.getHours(),
+        minutes: value.getMinutes(),
+      }))
+    } else {
+      setInternalDate(undefined)
+      setTime(undefined)
+      setFormattedValue("")
+    }
+  }, [value])
 
   const handleClear = () => {
-    setDate(undefined)
+    setInternalDate(undefined)
     setTime(undefined)
-    setValue("")
+    setFormattedValue("")
+    onChange?.(undefined as any) // form.reset() triggers this
     setOpen(false)
   }
 
   const handleToday = () => {
     const now = new Date()
-    setDate(now)
-    setTime({ 
-      hours: now.getHours(), 
-      minutes: now.getMinutes() 
-    })
+    setInternalDate(now)
     setMonth(now)
-    updateFormattedValue(now, { 
-      hours: now.getHours(), 
-      minutes: now.getMinutes() 
-    })
+    const t = { hours: now.getHours(), minutes: now.getMinutes() }
+    setTime(t)
+    setFormattedValue(formatDateWithTime(now, t))
+    onChange?.(mergeDateTime(now, t))
   }
 
-  function handleDateChange(newDate: Date | undefined) {
+  const handleDateChange = (newDate: Date | undefined) => {
     if (!newDate) return
-    setDate(newDate)
+    setInternalDate(newDate)
     setMonth(newDate)
-    updateFormattedValue(newDate, time)
+    const newDT = mergeDateTime(newDate, time)
+    setFormattedValue(formatDateWithTime(newDate, time))
+    onChange?.(newDT)
   }
 
-  function handleTimeChange(newTime: { hours: number; minutes: number }) {
+  const handleTimeChange = (newTime: { hours: number; minutes: number }) => {
     setTime(newTime)
-    updateFormattedValue(date, newTime)
+    const newDT = mergeDateTime(internalDate ?? new Date(), newTime)
+    setFormattedValue(formatDateWithTime(internalDate, newTime))
+    onChange?.(newDT)
   }
-
-  function updateFormattedValue(
-    d: Date | undefined,
-    t: { hours: number; minutes: number } | undefined
-  ) {
-    if (!d) {
-      setValue("")
-      return
-    }
-    const formatted = formatDateWithTime(d, t)
-    setValue(formatted)
-  }
-
-  React.useEffect(() => {
-    updateFormattedValue(date, time)
-  }, [date, time])
 
   return (
     <div className="flex flex-col gap-3">
-      <Label htmlFor="date" className="px-1">
-        {label}
-      </Label>
+      {label && <Label htmlFor="date" className="px-1">{label}</Label>}
       <div className="relative flex gap-2">
         <Input
+          data-test-id="date-input"
           id="date"
-          value={value}
+          value={formattedValue}
           placeholder="дд.мм.гггг --:--"
           className="bg-background pr-10"
-          onChange={(e) => {
-            setValue(e.target.value)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault()
-              setOpen(true)
-            }
-          }}
+          readOnly
         />
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
+              data-test-id="reveal-date-inputs-button"
               id="date-picker"
               variant="ghost"
               className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
@@ -109,7 +103,7 @@ export default function DatePicker({ label }: DatePickerProps) {
             <div className="h-[370px] flex flex-col justify-between border-r">
               <Calendar
                 mode="single"
-                selected={date}
+                selected={internalDate}
                 captionLayout="dropdown"
                 month={month}
                 onMonthChange={setMonth}
@@ -117,9 +111,9 @@ export default function DatePicker({ label }: DatePickerProps) {
                 weekStartsOn={1}
                 locale={ru}
               />
-
               <div className="flex justify-between px-4 py-1">
-                <Button 
+                <Button
+                  data-test-id="clear-date-button"
                   variant="ghost"
                   size="sm"
                   onClick={handleClear}
@@ -127,7 +121,8 @@ export default function DatePicker({ label }: DatePickerProps) {
                 >
                   Очистить
                 </Button>
-                <Button 
+                <Button
+                  data-test-id="set-today-button"
                   variant="ghost"
                   size="sm"
                   onClick={handleToday}
@@ -137,10 +132,9 @@ export default function DatePicker({ label }: DatePickerProps) {
                 </Button>
               </div>
             </div>
-              
-              <div className="px-1 pb-[10px]">
-                <TimePicker value={time} onChange={handleTimeChange} />
-              </div>
+            <div className="px-1 pb-[10px]">
+              <TimePicker value={time} onChange={handleTimeChange} />
+            </div>
           </PopoverContent>
         </Popover>
       </div>
@@ -153,18 +147,27 @@ function formatDateWithTime(
   time?: { hours: number; minutes: number }
 ) {
   if (!date) return ""
-  
   const dd = String(date.getDate()).padStart(2, "0")
   const mm = String(date.getMonth() + 1).padStart(2, "0")
   const yyyy = date.getFullYear()
-  
-  const timePart = time 
+  const timePart = time
     ? `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`
     : "--:--"
-  
   return `${dd}.${mm}.${yyyy} ${timePart}`
 }
 
+function mergeDateTime(date: Date, time?: { hours: number; minutes: number }) {
+  if (!time) return date
+  const newDate = new Date(date)
+  newDate.setHours(time.hours)
+  newDate.setMinutes(time.minutes)
+  newDate.setSeconds(0)
+  newDate.setMilliseconds(0)
+  return newDate
+}
+
 type DatePickerProps = {
-  label?: string;
+  label?: string
+  value?: Date
+  onChange?: (value: Date) => void
 }
