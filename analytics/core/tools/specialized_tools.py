@@ -3,7 +3,7 @@ import json
 from langchain.tools import tool
 from langchain_experimental.tools import PythonREPLTool
 
-from core.db.database import get_clickhouse_client
+from analytics.core.db.database import get_clickhouse_client
 
 
 @tool("trace-retriever")

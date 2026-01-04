@@ -3,9 +3,9 @@ from __future__ import annotations
 import redis
 from fastapi import APIRouter, HTTPException
 
-from core.config import get_settings
-from db.storage import create_chat
-from services.tokens import issue_chat_token
+from backend.core.config import get_settings
+from backend.db.storage import create_chat
+from backend.services.tokens import issue_chat_token
 
 router = APIRouter()
 

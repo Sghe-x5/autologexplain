@@ -10,9 +10,6 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    AI_API_KEY: str = Field(default="", validation_alias=AliasChoices("AI_API_KEY"))
-    AI_MODEL: str = Field(default="gpt-4o-mini", validation_alias=AliasChoices("AI_MODEL"))
-
     REDIS_HOST: str = Field(default="redis", validation_alias=AliasChoices("REDIS_HOST"))
     REDIS_PORT: int = Field(default=6379, validation_alias=AliasChoices("REDIS_PORT"))
     REDIS_DB: int = Field(default=0, validation_alias=AliasChoices("REDIS_DB"))
