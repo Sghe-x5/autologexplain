@@ -1,1 +1,1 @@
-export const FILTER_URL = undefined;
+export const FILTER_URL = "http://46.21.246.90:8080/logs/tree"; //http://46.21.246.90:8080/logs/tree
