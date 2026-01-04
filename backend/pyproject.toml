@@ -18,6 +18,7 @@ loguru = "*"
 python-dotenv = "*"
 pydantic-settings = "^2.10.1"
 clickhouse-connect = "^0.8.18"
+pydantic = "^2.11.7"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
@@ -59,3 +60,7 @@ ignore_missing_imports = true
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
