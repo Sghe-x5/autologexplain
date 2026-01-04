@@ -73,13 +73,7 @@ tasks:
           - cd $SOURCECRAFT_WORKSPACE/analytics
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
-              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
-              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
-              --push \
-              ./$SOURCECRAFT_WORKSPACE/analytics
+          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max --push .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -110,13 +104,7 @@ tasks:
           - cd $SOURCECRAFT_WORKSPACE/backend
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
-              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
-              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
-              --push \
-              ./$SOURCECRAFT_WORKSPACE/backend
+          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max --push .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
@@ -147,13 +135,7 @@ tasks:
           - cd $SOURCECRAFT_WORKSPACE/frontend
           - docker buildx create --use --name sc-builder || docker buildx use sc-builder
           - docker buildx inspect --bootstrap
-          - docker buildx build --platform linux/amd64 \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA \
-              --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest \
-              --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache \
-              --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max \
-              --push \
-              ./$SOURCECRAFT_WORKSPACE/frontend
+          - docker buildx build --platform linux/amd64 --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:$SOURCECRAFT_COMMIT_SHORT_SHA --tag $YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:latest --cache-from=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache --cache-to=type=registry,ref=$YC_DOCKER_REGISTRY_URI/$IMAGE_NAME:cache,mode=max --push .
       - name: docker-logout
         script:
           - docker logout $YC_DOCKER_REGISTRY_URI
