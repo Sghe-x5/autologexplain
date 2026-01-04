@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import redis
 from fastapi import APIRouter, HTTPException, status
+from loguru import logger
 from redis.exceptions import RedisError
 
 from backend.core.config import get_settings
@@ -16,13 +17,24 @@ def create_chat_anonymous():
     """
     Создаёт анонимный чат. Возвращает chat_id и подписанный token.
     """
+    logger.info("POST /chats/new: start create anonymous chat")
     try:
         chat_id = create_chat(user_id="anon", title="")
+        logger.debug("POST /chats/new: chat created {}", chat_id)
+
         token = issue_chat_token(chat_id)
+        logger.debug("POST /chats/new: token issued for {}", chat_id)
+
+    except RedisError as e:
+        logger.exception("POST /chats/new: Redis error during chat creation")
+        raise HTTPException(status_code=503, detail="redis_unavailable") from e
+
     except Exception as e:
+        logger.exception("POST /chats/new: unexpected error")
         raise HTTPException(status_code=500, detail="failed_to_create_chat") from e
-    else:
-        return {"chat_id": chat_id, "token": token}
+
+    logger.info("POST /chats/new: success {}", chat_id)
+    return {"chat_id": chat_id, "token": token}
 
 
 @router.post("/renew")

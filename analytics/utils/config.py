@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-YC_FOLDER_ID = os.getenv("FOLDER_ID")
-YC_IAM_TOKEN = os.getenv("IAM_TOKEN")
+YC_FOLDER_ID = os.getenv("YC_FOLDER_ID")
+YC_IAM_TOKEN = os.getenv("YC_IAM_TOKEN")
 YC_API_KEY = os.getenv("YC_API_KEY")
 
 if not YC_IAM_TOKEN and not YC_API_KEY:
