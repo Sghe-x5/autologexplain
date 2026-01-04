@@ -5,7 +5,7 @@ from backend.db.db import _normalize_json_columns, ping, query
 
 def test_ping_success(mock_ch_client):
     """Тест проверки доступности ClickHouse"""
-    with patch("db.db.client", return_value=mock_ch_client):
+    with patch("backend.db.db.client", return_value=mock_ch_client):
         assert ping() is True
         mock_ch_client.ping.assert_called_once()
 
@@ -13,7 +13,7 @@ def test_ping_success(mock_ch_client):
 def test_ping_failure(mock_ch_client):
     """Тест недоступности ClickHouse"""
     mock_ch_client.ping.side_effect = Exception("Connection failed")
-    with patch("db.db.client", return_value=mock_ch_client):
+    with patch("backend.db.db.client", return_value=mock_ch_client):
         assert ping() is False
 
 
@@ -41,7 +41,7 @@ def test_query(mock_ch_client):
     mock_result.result_rows = [(1, "test"), (2, "data")]
     mock_ch_client.query.return_value = mock_result
 
-    with patch("db.db.client", return_value=mock_ch_client):
+    with patch("backend.db.db.client", return_value=mock_ch_client):
         rows = query("SELECT * FROM table")
 
         assert len(rows) == 2
