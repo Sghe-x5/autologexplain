@@ -1,13 +1,13 @@
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface TimePickerProps {
   value?: { hours: number; minutes: number };
   onChange?: (time: { hours: number; minutes: number }) => void;
 }
 
-const clamp = (num: number, min: number, max: number) =>
-  Math.min(Math.max(num, min), max);
+// const clamp = (num: number, min: number, max: number) =>
+//   Math.min(Math.max(num, min), max);
 
 const TimePicker = ({ value, onChange }: TimePickerProps) => {
   const time = {
@@ -121,7 +121,9 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
           </div>
         </div>
 
-        <span className="text-xl font-semibold select-none relative top-[-2px]">:</span>
+        <span className="text-xl font-semibold select-none relative top-[-2px]">
+          :
+        </span>
 
         <div
           className="flex w-14 h-[28px] relative border border-input rounded-md shadow-xs select-none"

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { LogExplanation, UserLogExplanation } from "./types";
+import type { UserLogExplanation } from "./types";
 
 interface LogStore {
   log: UserLogExplanation | null;

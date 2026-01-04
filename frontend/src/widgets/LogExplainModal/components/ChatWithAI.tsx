@@ -44,10 +44,10 @@ export const ChatWithAI = () => {
     if (data?.items?.length) {
       setMessages((prev) => {
         // Добавляем только новые сообщения, которых еще нет в prev по id
-        const existingIds = new Set(prev.map((m) => m.id)); // выделяй id
+        const existingIds = new Set(prev.map((m) => m.id));
         const newMessages = data.items
-          .filter((m) => !existingIds.has(m.id))
-          .map((m) => ({
+          .filter((m: any) => !existingIds.has(m.id))
+          .map((m: any) => ({
             ...m,
             text: m.text
               .replace(/^```json\n/, "")
