@@ -115,6 +115,10 @@ tasks:
           - poetry run mypy .
 
   - name: backend-tests
+    env:
+      CLICKHOUSE_HOST: {{ secrets.clickhouse_host }}
+      CLICKHOUSE_PASSWORD: {{ secrets.clickhouse_password }}
+      WS_TOKEN: {{ secrets.ws_token }}
     cubes:
       - name: backend-tests
         image: python:3.11
@@ -127,6 +131,10 @@ tasks:
       - name: api-tests
         script:
           - cd backend
+          - cp .env.example .env
+          - sed -i 's/your-clickhouse-host-here/$CLICKHOUSE_HOST/g' .env
+          - sed -i 's/your-password-here/$CLICKHOUSE_PASSWORD/g' .env
+          - sed -i 's/your-token-here/$WS_TOKEN/g' .env
           - docker-compose up -d --build
           - cd testing/api_tests
           - python -m venv .venv
