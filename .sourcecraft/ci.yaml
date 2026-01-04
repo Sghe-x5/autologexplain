@@ -128,7 +128,7 @@ tasks:
           - cd backend
           - poetry install --no-interaction --no-ansi
           - poetry run pytest
-      - name: api-tests
+      - name: run-environment
         script:
           - cd $SOURCECRAFT_WORKSPACE/backend
           - cp .env.example .env
@@ -136,6 +136,8 @@ tasks:
           - sed -i "s/your-password-here/$CLICKHOUSE_PASSWORD/g" .env
           - sed -i "s/your-token-here/$WS_TOKEN/g" .env
           - docker-compose up -d --build
+      - name: run-api-tests
+        script:
           - cd $SOURCECRAFT_WORKSPACE/testing/api_tests
           - python -m venv .venv
           - source .venv/bin/activate
@@ -143,6 +145,7 @@ tasks:
           - cp .env.example .env
           - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
           - pytest --alluredir=allure-results
+          - apt install allure -y
           - allure generate allure-results --clean -o allure-report
           - ls -la allure-report
         artifacts:
