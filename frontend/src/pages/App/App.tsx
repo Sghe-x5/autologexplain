@@ -1,7 +1,7 @@
 import LogExplainUI from "@/widgets/LogExplainModal";
 import "./App.css";
 import { Separator } from "@/components/ui/separator";
-import { BotAnswer } from "@/widgets/LogExplainModal/components/BotAnswer";
+import { ChatWithAI } from "@/widgets/LogExplainModal/components/ChatWithAI";
 import { Bot } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ function App() {
           <Separator className="my-5" />
           <LogExplainUI />
           <Separator className="my-8" />
-          <BotAnswer />
+          <ChatWithAI />
         </div>
       )}
       <Button
