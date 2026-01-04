@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from core.config import get_settings
-from services.tokens import TokenSecretError, issue_chat_token
+from backend.core.config import get_settings
+from backend.services.tokens import TokenSecretError, issue_chat_token
 
 
 def test_success(mock_settings):

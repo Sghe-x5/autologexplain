@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from clickhouse_connect.driver.client import Client
 
-from services import tokens
+from backend.services import tokens
 
 
 @pytest.fixture
