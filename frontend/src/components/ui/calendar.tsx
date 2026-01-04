@@ -8,14 +8,14 @@ import {
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/button";
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
   captionLayout = "label",
-  buttonVariant = "ghost",
+  // buttonVariant = "ghost",
   formatters,
   components,
   ...props
@@ -244,7 +244,7 @@ type MonthYearInputsProps = {
   max: number;
   onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   options?: { label: string; value: number }[];
-  classNames?: any;
+  classNames?: { [key: string]: string };
 };
 
 function MonthYearInputs({

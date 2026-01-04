@@ -22,17 +22,19 @@ function validateFilters(data: unknown): asserts data is FilterData[] {
       throw new Error(`Invalid 'services' at index ${i}`);
     }
 
-    item.services.forEach((srv: { service: any; environments: any[]; }, j: any) => {
-      if (typeof srv.service !== "string") {
-        throw new Error(`Invalid 'service' at [${i}][${j}]`);
+    item.services.forEach(
+      (srv: { service: string; environments: string[] }, j: number) => {
+        if (typeof srv.service !== "string") {
+          throw new Error(`Invalid 'service' at [${i}][${j}]`);
+        }
+        if (
+          !Array.isArray(srv.environments) ||
+          !srv.environments.every((env: string) => typeof env === "string")
+        ) {
+          throw new Error(`Invalid 'environments' at [${i}][${j}]`);
+        }
       }
-      if (
-        !Array.isArray(srv.environments) ||
-        !srv.environments.every((env: any) => typeof env === "string")
-      ) {
-        throw new Error(`Invalid 'environments' at [${i}][${j}]`);
-      }
-    });
+    );
   });
 }
 

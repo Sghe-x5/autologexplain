@@ -14,13 +14,13 @@ function App() {
 
   useEffect(() => {
     if (isShown) {
-      modalRoot?.classList.remove('translate-x-full', 'opacity-0');
-      modalRoot?.classList.add('translate-x-0', 'opacity-100');
+      modalRoot?.classList.remove("translate-x-full", "opacity-0");
+      modalRoot?.classList.add("translate-x-0", "opacity-100");
     } else {
-      modalRoot?.classList.remove('translate-x-0', 'opacity-100');
-      modalRoot?.classList.add('translate-x-full', 'opacity-0');
+      modalRoot?.classList.remove("translate-x-0", "opacity-100");
+      modalRoot?.classList.add("translate-x-full", "opacity-0");
     }
-  }, [isShown]);
+  }, [isShown, modalRoot?.classList]);
 
   return (
     <main>

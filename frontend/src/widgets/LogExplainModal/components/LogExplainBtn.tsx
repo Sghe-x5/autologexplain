@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/button";
 import { useDispatch, useSelector } from "react-redux";
 import { type AppDispatch, type RootState } from "@/lib/store";
 import { open } from "@/widgets/LogExplainModal/model/showModalSlice";
