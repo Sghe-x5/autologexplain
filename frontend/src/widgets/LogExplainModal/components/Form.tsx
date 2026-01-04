@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import DatePicker from "@/features/DatePicker";
+import DatePicker from "@/features/DatePicker/DatePicker";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -101,7 +101,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время начала</FormLabel>
                   <FormControl>
-                    <DatePicker value={field.value} onChange={field.onChange} />
+                    <DatePicker />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,7 +114,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время окончания</FormLabel>
                   <FormControl>
-                    <DatePicker value={field.value} onChange={field.onChange} />
+                    <DatePicker  />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
