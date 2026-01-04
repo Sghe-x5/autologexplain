@@ -116,9 +116,9 @@ tasks:
 
   - name: backend-tests
     env:
-      CLICKHOUSE_HOST: {{ secrets.clickhouse_host }}
-      CLICKHOUSE_PASSWORD: {{ secrets.clickhouse_password }}
-      WS_TOKEN: {{ secrets.ws_token }}
+      CLICKHOUSE_HOST: ${{ secrets.clickhouse_host }}
+      CLICKHOUSE_PASSWORD: ${{ secrets.clickhouse_password }}
+      WS_TOKEN: ${{ secrets.ws_token }}
     cubes:
       - name: backend-tests
         image: python:3.11
