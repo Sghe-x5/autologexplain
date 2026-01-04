@@ -27,7 +27,7 @@ describe("chatManagementApi (unit behavior)", () => {
   });
 
   it("newChat sends POST /chats/new and stores response", async () => {
-    fetchMock.mockImplementationOnce((req: Request) =>
+    fetchMock.mockImplementationOnce(() =>
       Promise.resolve(
         new Response(JSON.stringify({ chat_id: "c1", token: "t1" }), {
           status: 200,
@@ -48,7 +48,7 @@ describe("chatManagementApi (unit behavior)", () => {
   });
 
   it("renewToken sends POST /chats/renew with body { chat_id }", async () => {
-    fetchMock.mockImplementationOnce((req: Request) =>
+    fetchMock.mockImplementationOnce(() =>
       Promise.resolve(
         new Response(JSON.stringify({ token: "new-token" }), {
           status: 200,
