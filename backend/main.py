@@ -20,6 +20,7 @@ app.include_router(logs_router, prefix="/logs", tags=["logs"])
 app.include_router(analysis_router, prefix="/analysis", tags=["analysis"])
 app.include_router(ws_router, tags=["ws"])
 
+
 @app.on_event("startup")
 def on_startup():
     # сейчас хранение — в Redis, инициализация — no-op

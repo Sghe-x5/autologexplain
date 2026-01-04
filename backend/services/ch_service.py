@@ -13,12 +13,26 @@ def _esc(val):
         return val
     return "'" + str(val).replace("'", "''") + "'"
 
+
 def _build_where(filters: dict) -> str:
-    parts = [f"timestamp BETWEEN toDateTime({_esc(filters['start_date'])}) AND toDateTime({_esc(filters['end_date'])})"]
-    for key in ("product", "service", "environment", "level", "trace_id", "ip_address", "method", "status_code", "url_path"):
+    parts = [
+        f"timestamp BETWEEN toDateTime({_esc(filters['start_date'])}) AND toDateTime({_esc(filters['end_date'])})"
+    ]
+    for key in (
+        "product",
+        "service",
+        "environment",
+        "level",
+        "trace_id",
+        "ip_address",
+        "method",
+        "status_code",
+        "url_path",
+    ):
         if filters.get(key) is not None:
             parts.append(f"{key} = {_esc(filters[key])}")
     return " AND ".join(parts)
+
 
 def fetch_logs_and_aggregates(filters: dict) -> dict:
     page = max(0, int(filters.get("page", 0)))
