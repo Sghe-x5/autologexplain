@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import redis
 from fastapi import APIRouter, HTTPException, status
+from redis.exceptions import RedisError
 
 from backend.core.config import get_settings
 from backend.db.storage import create_chat
@@ -30,6 +31,7 @@ def renew_chat_token(chat_id: str):
     Выдаёт новый токен, если чат ещё существует.
     """
     s = get_settings()
+
     try:
         r = redis.Redis(
             host=s.REDIS_HOST,
@@ -41,12 +43,12 @@ def renew_chat_token(chat_id: str):
             socket_connect_timeout=2.0,
             retry_on_timeout=True,
         )
-        if not r.exists(f"chat:{chat_id}"):
-            raise HTTPException(status_code=404, detail="chat_not_found")
-    except HTTPException:
-        raise
-    except Exception as e:
+        exists = r.exists(f"chat:{chat_id}")
+    except RedisError as e:
         raise HTTPException(status_code=503, detail="redis_unavailable") from e
+
+    if not exists:
+        raise HTTPException(status_code=404, detail="chat_not_found")
 
     token = issue_chat_token(chat_id)
     return {"chat_id": chat_id, "token": token}
