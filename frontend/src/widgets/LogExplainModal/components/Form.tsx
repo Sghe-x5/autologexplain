@@ -101,7 +101,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время начала</FormLabel>
                   <FormControl>
-                    <DatePicker />
+                    <DatePicker label={""}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,7 +114,7 @@ const LogExplainForm = () => {
                 <FormItem className="w-full">
                   <FormLabel>Время окончания</FormLabel>
                   <FormControl>
-                    <DatePicker  />
+                    <DatePicker  label={""}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
