@@ -4,10 +4,6 @@ resource "random_password" "postgres_password" {
   override_special = "_%@"
 }
 
-data "yandex_compute_image" "ubuntu_image" {
-  family = "ubuntu-2204-lts"
-}
-
 resource "yandex_compute_disk" "boot-disk-1" {
   name     = "boot-disk-1"
   type     = "network-hdd"
