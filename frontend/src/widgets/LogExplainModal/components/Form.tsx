@@ -64,7 +64,6 @@ const LogExplainForm = () => {
   });
 
   const setLog = useLogStore((state) => state.setLog);
-  const resetLog = useLogStore((state) => state.reset);
 
   const watchProduct = form.watch("product");
   const watchService = form.watch("service");
@@ -77,11 +76,6 @@ const LogExplainForm = () => {
       endTime: values.endTime,
     });
     setLog(mockData);
-  };
-
-  const onReset = () => {
-    form.reset();
-    resetLog();
   };
 
   const interactiveField =
@@ -226,7 +220,13 @@ const LogExplainForm = () => {
                 <FormItem className="flex-1">
                   <FormControl>
                     <div className={interactiveField}>
-                      <div className={!watchEnvironment ? "pointer-events-none opacity-50" : ""}>
+                      <div
+                        className={
+                          !watchEnvironment
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      >
                         <DatePicker
                           label=""
                           value={field.value}
@@ -249,7 +249,13 @@ const LogExplainForm = () => {
                 <FormItem className="flex-1">
                   <FormControl>
                     <div className={interactiveField}>
-                      <div className={!watchEnvironment ? "pointer-events-none opacity-50" : ""}>
+                      <div
+                        className={
+                          !watchEnvironment
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      >
                         <DatePicker
                           label=""
                           value={field.value}
@@ -270,26 +276,17 @@ const LogExplainForm = () => {
 
         <Separator />
 
-        <div className="flex gap-2">
-          <Button
-            type="submit"
-            className="flex-[11] bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
-            disabled={isFormDisabled}
-          >
-            <Sparkles /> Анализировать логи
-          </Button>
-          <Button
-            type="button"
-            className="flex-[1]"
-            variant="secondary"
-            onClick={onReset}
-          >
-            Сбросить
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          className=" bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
+          disabled={isFormDisabled}
+        >
+          <Sparkles /> Анализировать логи
+        </Button>
       </form>
     </Form>
   );
 };
 
 export { LogExplainForm };
+
