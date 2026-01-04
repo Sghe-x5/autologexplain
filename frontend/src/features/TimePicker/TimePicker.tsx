@@ -1,48 +1,99 @@
-import { useState, useRef, useEffect } from 'react';
+'use client'
+
+import { useEffect, useRef, useState } from "react"
 
 interface TimePickerProps {
-  label?: string;
-  value?: { hours: number; minutes: number };
-  onChange?: (time: { hours: number; minutes: number }) => void;
+  value?: { hours: number; minutes: number }
+  onChange?: (time: { hours: number; minutes: number }) => void
 }
 
-const TimePicker = ({ label, value, onChange }: TimePickerProps) => {
-  const [time, setTime] = useState({
-    hours: value?.hours ?? 0,
-    minutes: value?.minutes ?? 0
-  });
-  
-  const hoursRef = useRef<HTMLDivElement>(null);
-  const minutesRef = useRef<HTMLDivElement>(null);
-  const [isOpen, setIsOpen] = useState(false);
+const TimePicker = ({ value, onChange }: TimePickerProps) => {
+    const time = {
+      hours: value?.hours ?? 0,
+      minutes: value?.minutes ?? 0,
+  }
 
+  const hours = Array.from({ length: 24 }, (_, i) => i)
+  const minutes = Array.from({ length: 60 }, (_, i) => i)
+  const repeatedHours = [...hours, ...hours, ...hours]
+  const repeatedMinutes = [...minutes, ...minutes, ...minutes]
+
+  const hourRef = useRef<HTMLDivElement>(null)
+  const minuteRef = useRef<HTMLDivElement>(null)
+
+  const itemHeight = 36
+  const middleIndexHours = hours.length
+  const middleIndexMinutes = minutes.length
+
+  useEffect(() => {
+    if (hourRef.current) {
+      hourRef.current.scrollTop = middleIndexHours * itemHeight
+    }
+    if (minuteRef.current) {
+      minuteRef.current.scrollTop = middleIndexMinutes * itemHeight
+    }
+  }, [])
+
+  const loopScroll = (ref: React.RefObject<HTMLDivElement | null>, totalItems: number) => {
+    if (!ref.current) return
+    const scrollTop = ref.current.scrollTop
+    const totalHeight = totalItems * itemHeight
+
+    if (scrollTop <= itemHeight) {
+      ref.current.scrollTop = scrollTop + totalHeight
+    } else if (scrollTop >= totalHeight * 2) {
+      ref.current.scrollTop = scrollTop - totalHeight
+    }
+  }
+
+  const handleClickHour = (h: number) => {
+    const updated = { ...time, hours: h }
+    onChange?.(updated)
+  }
+
+  const handleClickMinute = (m: number) => {
+    const updated = { ...time, minutes: m }
+    onChange?.(updated)
+  }
 
   return (
-    <form className="max-w-[16rem] mx-auto grid grid-cols-2 gap-4">
-        <div>
-            <label htmlFor="start-time" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Start time:</label>
-            <div className="relative">
-                <div className="absolute inset-y-0 end-0 top-0 flex items-center pe-3.5 pointer-events-none">
-                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                        <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-                <input type="time" id="start-time" className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" min="09:00" max="18:00" value="00:00" required />
-            </div>
-        </div>
-        <div>
-            <label htmlFor="end-time" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">End time:</label>
-            <div className="relative">
-                <div className="absolute inset-y-0 end-0 top-0 flex items-center pe-3.5 pointer-events-none">
-                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                        <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-                <input type="time" id="end-time" className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" min="09:00" max="18:00" value="00:00" required />
-            </div>
-        </div>
-    </form>
-  );
-};
+    <div className="flex gap-1 h-[360px] items-center px-1 py-1">
+      <div
+        ref={hourRef}
+        className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
+        onScroll={() => loopScroll(hourRef, hours.length)}
+      >
+        {repeatedHours.map((h, i) => (
+          <div
+            key={`h-${i}`}
+            onClick={() => handleClickHour(h)}
+            className={`cursor-pointer px-4 py-1 h-8 mb-1 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
+              h === time.hours ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+          >
+            {h.toString().padStart(2, "0")}
+          </div>
+        ))}
+      </div>
+      <div
+        ref={minuteRef}
+        className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
+        onScroll={() => loopScroll(minuteRef, minutes.length)}
+      >
+        {repeatedMinutes.map((m, i) => (
+          <div
+            key={`m-${i}`}
+            onClick={() => handleClickMinute(m)}
+            className={`cursor-pointer px-4 py-1 h-8 mb-1 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
+              m === time.minutes ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+          >
+            {m.toString().padStart(2, "0")}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
-export default TimePicker;
+export default TimePicker
