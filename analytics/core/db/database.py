@@ -1,7 +1,6 @@
 from typing import Any
 
 import clickhouse_connect
-
 from analytics.utils.config import (
     CLICKHOUSE_DATABASE,
     CLICKHOUSE_HOST,

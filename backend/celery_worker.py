@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 import json
+from typing import Any
 
 from celery import Celery  # type: ignore[import-untyped]
 from loguru import logger
@@ -32,6 +32,13 @@ celery_app.conf.update(
 )
 
 
+class EmptyChatTurnError(ValueError):
+    """Raised when chat_turn content is empty."""
+
+    def __init__(self) -> None:
+        super().__init__("Empty content for chat_turn")
+
+
 def _finalize(chat_id: str, request_id: str, content: str) -> None:
     """
     Сохраняет ответ ассистента и публикует событие в канал WS.
@@ -46,6 +53,14 @@ def _finalize(chat_id: str, request_id: str, content: str) -> None:
             "content": content,
         },
     )
+
+
+def _validate_chat_turn_message(user_message: str) -> None:
+    """
+    Проверяет, что сообщение пользователя не пустое.
+    """
+    if not user_message:
+        raise EmptyChatTurnError()
 
 
 @celery_app.task(
@@ -78,16 +93,13 @@ def run_analysis_pubsub(
                 filters_repr = repr(filters)
             user_prompt = f"{user_prompt}\n\nФильтры:\n{filters_repr}"
 
-        # 3) Сохраняем ход пользователя
         try:
             add_message(chat_id, "user", user_prompt, {"filters": filters})
         except Exception:
             logger.exception("failed to add user message to chat history (analysis)")
 
-        # 4) Вызов реальной YandexGPT через analytics
         answer = ask_llm(user_prompt, chat_id=chat_id)
 
-        # 5) Отправка ответа
         _finalize(chat_id, request_id, answer)
 
     except Exception as e:
@@ -119,8 +131,8 @@ def chat_turn_pubsub(self, request_id: str, chat_id: str, content: str) -> None:
             request_id,
             bool(user_message),
         )
-        if not user_message:
-            raise ValueError("Empty content for chat_turn")
+
+        _validate_chat_turn_message(user_message)
 
         try:
             add_message(chat_id, "user", user_message, {})
