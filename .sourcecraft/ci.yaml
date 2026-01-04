@@ -159,6 +159,7 @@ tasks:
       CLICKHOUSE_HOST: ${{ secrets.clickhouse_host }}
       CLICKHOUSE_PASSWORD: ${{ secrets.clickhouse_password }}
       WS_TOKEN: ${{ secrets.ws_token }}
+      ENV_ANALYTICS: ${{ secrets.env_analytics  }}
     cubes:
       - name: backend-tests
         image: python:3.11
@@ -175,6 +176,7 @@ tasks:
           - sed -i "s/your-clickhouse-host-here/$CLICKHOUSE_HOST/g" .env
           - sed -i "s/your-password-here/$CLICKHOUSE_PASSWORD/g" .env
           - sed -i "s/your-token-here/$WS_TOKEN/g" .env
+          - echo "$ENV_ANALYTICS" > $SOURCECRAFT_WORKSPACE/analytics/.env
           - docker-compose up -d --build
       - name: run-api-tests
         script:
