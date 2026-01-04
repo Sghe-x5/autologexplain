@@ -1,0 +1,7 @@
+pytest>=7.0
+pytest-asyncio>=1.0
+requests>=2.31
+python-dotenv>=1.0
+allure-pytest==2.15.0
+websockets>=11.0
+loguru>=0.7
