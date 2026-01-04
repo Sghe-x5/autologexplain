@@ -244,6 +244,12 @@
   notify: Restart app stack
 
 # Запуск контейнеров (Compose v2)
+- name: Delete existing containers
+  command: docker compose -f /opt/app/compose.yaml down -v
+  args:
+    chdir: /opt/app
+  become: true
+
 - name: Pull and start containers
   command: docker compose -f /opt/app/compose.yaml up -d --pull always
   args:
