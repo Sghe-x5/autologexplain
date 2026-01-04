@@ -90,7 +90,10 @@ export const LogExplainUI = ({
             </section>
           )}
           {hasLog && (
-            <div data-test-id="chat-with-ai-section">
+            <div
+              className="h-full max-h-full"
+              data-test-id="chat-with-ai-section"
+            >
               <ChatWithAI autoAnalysisParams={analysisParams || undefined} />
             </div>
           )}
