@@ -9,6 +9,8 @@ import {
   wsApi,
 } from "@/api";
 
+const LOG_EXPLAIN_PERSIST_KEY = "logExplainState";
+
 export const store = configureStore({
   reducer: {
     showModal,
@@ -18,6 +20,7 @@ export const store = configureStore({
     [chatWebSocketApi.reducerPath]: chatWebSocketApi.reducer,
     [chatMessagesApi.reducerPath]: chatMessagesApi.reducer,
   },
+  // preloadedState берём из самого слайса (он читает localStorage сам)
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(wsApi.middleware)
@@ -25,6 +28,23 @@ export const store = configureStore({
       .concat(chatWebSocketApi.middleware)
       .concat(chatMessagesApi.middleware),
 });
+
+// persist logExplain slice
+try {
+  store.subscribe(() => {
+    const state = store.getState() as { logExplain: unknown };
+    try {
+      localStorage.setItem(
+        LOG_EXPLAIN_PERSIST_KEY,
+        JSON.stringify(state.logExplain)
+      );
+    } catch {
+      // ignore quota or serialization issues
+    }
+  });
+} catch {
+  // ignore environments without localStorage
+}
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
