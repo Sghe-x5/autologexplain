@@ -129,6 +129,13 @@
     group: ubuntu
     mode: '0755'
 
+# Ensure nginx config dir early (needed for optional htpasswd before compose up)
+- name: Ensure nginx config dir exists
+  ansible.builtin.file:
+    path: /opt/app/nginx
+    state: directory
+    mode: '0755'
+
 # Локальная сборка backend (опционально)
 - name: Ensure backend build context root exists
   file:
@@ -148,11 +155,59 @@
     mode: '0644'
   when: backend_build_local | default(false)
 
-# Шаблоны конфигов
-- name: Render docker compose
+# Determine if basic auth is enabled based on provided vars/env
+- name: Set basic auth enabled fact
+  ansible.builtin.set_fact:
+    nginx_basic_auth_enabled: >-
+      {{
+        (nginx_basic_auth_user | default(lookup('env','NGINX_BASIC_AUTH_USER')) | default('', true)) | length > 0 and
+        (nginx_basic_auth_password | default(lookup('env','NGINX_BASIC_AUTH_PASSWORD')) | default('', true)) | length > 0
+      }}
+
+- name: Check if .htpasswd path is a directory
+  ansible.builtin.stat:
+    path: /opt/app/nginx/.htpasswd
+  register: htpasswd_stat
+
+- name: Remove .htpasswd directory if exists
+  ansible.builtin.file:
+    path: /opt/app/nginx/.htpasswd
+    state: absent
+  when: htpasswd_stat.stat.exists and htpasswd_stat.stat.isdir | default(false)
+
+- name: Ensure OpenSSL is present for htpasswd hashing
+  ansible.builtin.package:
+    name: openssl
+    state: present
+
+- name: Create Basic Auth credentials file
+  vars:
+    _ht_user: "{{ nginx_basic_auth_user | default(lookup('env','NGINX_BASIC_AUTH_USER')) }}"
+    _ht_pass: "{{ nginx_basic_auth_password | default(lookup('env','NGINX_BASIC_AUTH_PASSWORD')) }}"
+  when:
+    - nginx_basic_auth_enabled | default(false)
+  block:
+    - name: Hash password with apr1
+      ansible.builtin.command: "openssl passwd -apr1 {{ _ht_pass | quote }}"
+      register: _ht_hash
+      changed_when: false
+      no_log: true
+
+    - name: Write .htpasswd file
+      ansible.builtin.copy:
+        dest: /opt/app/nginx/.htpasswd
+        content: "{{ _ht_user }}:{{ _ht_hash.stdout }}\n"
+        owner: root
+        group: root
+        mode: '0640'
+      no_log: true
+      notify: Restart app stack
+
+# Шаблоны конфигов (render after htpasswd decision)
+- name: Render nginx.conf
   template:
-    src: compose.yaml.j2
-    dest: /opt/app/compose.yaml
+    src: nginx.conf.j2
+    dest: /opt/app/nginx.conf
     owner: ubuntu
     group: ubuntu
     mode: '0644'
@@ -176,10 +231,10 @@
     mode: '0644'
   notify: Restart app stack
 
-- name: Render nginx.conf
+- name: Render docker compose
   template:
-    src: nginx.conf.j2
-    dest: /opt/app/nginx.conf
+    src: compose.yaml.j2
+    dest: /opt/app/compose.yaml
     owner: ubuntu
     group: ubuntu
     mode: '0644'

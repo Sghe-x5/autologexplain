@@ -45,3 +45,4 @@ terraform.rc
 # planout
 
 key.json
+yandex_cloud_ssh_key

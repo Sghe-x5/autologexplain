@@ -17,6 +17,13 @@
 - задаются в deploy-app.yml (образы, Valkey/ClickHouse, ключи)
 - возьмите FQDN Valkey из terraform outputs (redis_endpoints) и пароль (redis_password)
 
+Базовая авторизация (опционально):
+- Чтобы включить Basic Auth на всех эндпоинтах, задайте переменные окружения перед запуском:
+	- NGINX_BASIC_AUTH_USER
+	- NGINX_BASIC_AUTH_PASSWORD
+- Если заданы, Ansible сгенерирует /opt/app/nginx/.htpasswd, смонтирует его в proxy и добавит auth_basic в nginx.conf.
+- Если не заданы, авторизация отключена и файл не монтируется (избегает 500 на отсутствующем htpasswd).
+
 Архитектура:
 - 2+ приватных VM app-*, доступ через bastion (ProxyCommand)
 - NLB балансирует TCP на порт app_port
