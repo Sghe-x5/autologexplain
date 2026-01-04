@@ -1,8 +1,9 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { wsRegistry } from "@/lib/model/wsRegistry";
 import { WS_BASE, baseUrl } from "@/consts/api.const";
+import type { TOutgoing } from "@/lib/chat.schemas";
 
-function sendWebSocketMessage(chatId: string, message: any) {
+function sendWebSocketMessage(chatId: string, message: TOutgoing) {
   const ws = wsRegistry.get(chatId);
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     return {

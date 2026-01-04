@@ -1,5 +1,4 @@
 import { FILTER_URL } from "@/consts/api.const";
-import { FILTERS_MOCK } from "@/mocks/filter.mock";
 
 export type FilterData = {
   product: string;
@@ -41,12 +40,9 @@ export function validateFilters(data: unknown): asserts data is FilterData[] {
 export const GetFilters = async (): Promise<FilterData[]> => {
   const fetchedData = await fetch(FILTER_URL || "", { method: "GET" })
     .then((res) => res.json())
-    .catch(
-      () => FILTERS_MOCK
-      // {
-      //     message: "rejected promise", // Заменить в проде
-      //   }
-    );
+    .catch(() => ({
+      message: "rejected promise", // Заменить в проде
+    }));
 
   validateFilters(fetchedData);
 
