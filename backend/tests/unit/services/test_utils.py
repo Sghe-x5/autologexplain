@@ -24,8 +24,7 @@ def test_publish_ws_message(monkeypatch):
 
     # Проверяем что publish вызван с правильными аргументами
     mock_redis.publish.assert_called_once_with(
-        "chat:123",
-        json.dumps(test_payload, ensure_ascii=False, separators=(",", ":"))
+        "chat:123", json.dumps(test_payload, ensure_ascii=False, separators=(",", ":"))
     )
 
 
