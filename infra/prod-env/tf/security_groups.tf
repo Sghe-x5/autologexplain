@@ -38,6 +38,20 @@ resource "yandex_vpc_security_group" "app" {
     security_group_id = yandex_vpc_security_group.bastion.id
   }
 
+  ingress {
+    description       = "Prometheus metrics"
+    protocol          = "TCP"
+    port              = 9100
+    security_group_id = yandex_vpc_security_group.bastion.id
+  }
+
+  ingress {
+    description       = "cAdvisor metrics"
+    protocol          = "TCP"
+    port              = 1337
+    security_group_id = yandex_vpc_security_group.bastion.id
+  }
+
   # Egress allow all (NAT GW will route internet)
   egress {
     protocol       = "ANY"
@@ -56,6 +70,37 @@ resource "yandex_vpc_security_group" "bastion" {
     description    = "SSH from internet"
     protocol       = "TCP"
     port           = 22
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Prometheus
+  ingress {
+    description = "Prometheus UI"
+    protocol    = "TCP"
+    port        = 9090
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Grafana
+  ingress {
+    description = "Grafana UI"
+    protocol    = "TCP"
+    port        = 3000
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Loki
+  ingress {
+    description = "Loki push (Promtail)"
+    protocol    = "TCP"
+    port        = 3100
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description    = "HTTPS 443"
+    protocol       = "TCP"
+    port           = 443
     v4_cidr_blocks = ["0.0.0.0/0"]
   }
 

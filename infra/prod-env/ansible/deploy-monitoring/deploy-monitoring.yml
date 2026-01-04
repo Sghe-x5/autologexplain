@@ -1,0 +1,160 @@
+---
+- name: Deploy monitoring stack on bastion (Grafana + Prometheus + Loki)
+  hosts: bastion
+  become: true
+  gather_facts: true
+  vars:
+    grafana_admin_user: "{{ (lookup('env', 'GRAFANA_ADMIN_USER') | default('', true)) or (lookup('ini', 'GRAFANA_ADMIN_USER file=' + playbook_dir + '/.env type=properties') | default('admin', true)) }}"
+    grafana_admin_password: "{{ (lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('', true)) or (lookup('ini', 'GRAFANA_ADMIN_PASSWORD file=' + playbook_dir + '/.env type=properties') | default('admin', true)) }}"
+  tasks:
+    - name: Install prerequisites for Docker repo (bastion)
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: yes
+
+    - name: Ensure /etc/apt/keyrings exists (bastion)
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Docker official GPG key (bastion)
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Add Docker apt repository (bastion)
+      apt_repository:
+        repo: >-
+          deb [arch={{ 'amd64' if ansible_architecture in ['x86_64','amd64']
+          else ('arm64' if ansible_architecture in ['aarch64','arm64'] else ansible_architecture) }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_distribution_release | default('noble') }} stable
+        filename: docker
+        state: present
+
+    - name: Install Docker CE and plugins (bastion)
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Ensure monitoring dir
+      file:
+        path: /opt/monitoring
+        state: directory
+        mode: "0755"
+
+    - name: Render Prometheus config
+      template:
+        src: templates/prometheus.yml.j2
+        dest: /opt/monitoring/prometheus.yml
+        mode: "0644"
+
+    - name: Ensure Grafana provisioning dirs
+      file:
+        path: /opt/monitoring/grafana/datasources
+        state: directory
+        mode: "0755"
+
+    - name: Provision Grafana datasources (Prometheus & Loki)
+      copy:
+        dest: /opt/monitoring/grafana/datasources/datasources.yml
+        mode: "0644"
+        content: |
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://prometheus:9090
+              isDefault: true
+            - name: Loki
+              type: loki
+              access: proxy
+              url: http://loki:3100
+
+    - name: Render Loki config
+      template:
+        src: templates/loki-config.yml.j2
+        dest: /opt/monitoring/loki-config.yml
+        mode: "0644"
+
+    - name: Render docker-compose for bastion
+      template:
+        src: templates/docker-compose.bastion.yml.j2
+        dest: /opt/monitoring/docker-compose.yml
+        mode: "0644"
+
+    - name: Start monitoring stack
+      shell: docker compose up -d
+      args:
+        chdir: /opt/monitoring
+
+- name: Deploy exporters and promtail on app nodes
+  hosts: "app-*"
+  become: true
+  gather_facts: true
+  vars:
+    loki_url: "http://{{ hostvars[groups['bastion'][0]].ansible_host | default('bastion') }}:3100"
+    deploy_app_exporters: false
+  tasks:
+    - name: Ensure monitoring dir
+      file:
+        path: /opt/monitoring
+        state: directory
+        mode: "0755"
+      when: deploy_app_exporters | bool
+
+    - name: Render promtail config
+      template:
+        src: templates/promtail-config.yml.j2
+        dest: /opt/monitoring/promtail-config.yml
+        mode: "0644"
+      when: deploy_app_exporters | bool
+
+    - name: Run node-exporter
+      shell: |
+        docker rm -f node-exporter 2>/dev/null || true
+        docker run -d --name node-exporter --restart unless-stopped \
+          -p 9100:9100 \
+          --pid="host" \
+          -v /:/host:ro,rslave \
+          prom/node-exporter:latest \
+          --path.rootfs=/host
+      when: deploy_app_exporters | bool
+
+    - name: Run cAdvisor
+      shell: |
+        docker rm -f cadvisor 2>/dev/null || true
+        docker run -d --name cadvisor --restart unless-stopped \
+          -p 8080:8080 \
+          -v /:/rootfs:ro \
+          -v /var/run:/var/run:ro \
+          -v /sys:/sys:ro \
+          -v /var/lib/docker/:/var/lib/docker:ro \
+          gcr.io/cadvisor/cadvisor:latest
+      when: deploy_app_exporters | bool
+
+    - name: Run promtail
+      shell: |
+        docker rm -f promtail 2>/dev/null || true
+        docker run -d --name promtail --restart unless-stopped \
+          -v /opt/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro \
+          -v /var/log:/var/log:ro \
+          -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
+          -p 1514:1514 \
+          grafana/promtail:2.9.3 \
+          -config.file=/etc/promtail/config.yml
+      when: deploy_app_exporters | bool
