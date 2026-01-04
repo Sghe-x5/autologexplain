@@ -2,7 +2,11 @@ on:
   pull_request:
     - workflows: test-backend-workflow
       filter:
-        paths: ["backend/**","analytics/**"]
+        paths: "backend/**"
+
+    - workflows: test-analytics-workflow
+      filter:
+        paths: "analytics/**
 
     - workflows: test-frontend-workflow
       filter:
@@ -17,6 +21,10 @@ workflows:
     tasks:
       - frontend-linters
       - frontend-tests
+  test-analytics-workflow:
+    tasks:
+      - analytics-linters
+      - analytics-tests
 
 tasks:
   - name: backend-linters
@@ -44,6 +52,29 @@ tasks:
           - poetry install --no-interaction --no-ansi
           - poetry run pytest
 
+  - name: analytics-linters
+    cubes:
+      - name: backend-linting
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd analytics
+          - poetry install --no-interaction --no-ansi --no-root
+          - poetry run pip install ruff mypy
+          - poetry run ruff check .
+          - poetry run ruff format --diff .
+          - poetry run mypy .
+  - name: analytics-tests
+    cubes:
+      - name: backend-tests
+        image: python:3.11
+        script:
+          - pip install poetry==1.8.3
+          - poetry config virtualenvs.create false
+          - cd analytics
+          - poetry install --no-interaction --no-ansi
+          - poetry run pytest
   - name: frontend-linters
     cubes:
       - name: frontend-linting
@@ -52,7 +83,6 @@ tasks:
           - cd frontend
           - yarn install --frozen-lockfile
           - yarn lint
-
   - name: frontend-tests
     cubes:
       - name: frontend-tests
