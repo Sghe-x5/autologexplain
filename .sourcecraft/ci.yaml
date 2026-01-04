@@ -135,7 +135,6 @@ tasks:
           - sed -i "s/your-clickhouse-host-here/$CLICKHOUSE_HOST/g" .env
           - sed -i "s/your-password-here/$CLICKHOUSE_PASSWORD/g" .env
           - sed -i "s/your-token-here/$WS_TOKEN/g" .env
-          - cat .env
           - docker-compose up -d --build
           - cd $SOURCECRAFT_WORKSPACE/testing/api_tests
           - python -m venv .venv
@@ -143,8 +142,6 @@ tasks:
           - pip install -r requirements.txt
           - cp .env.example .env
           - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
-          - echo "Sleep 20 seconds to start"
-          - sleep 20
           - pytest --alluredir=allure-results
           - allure generate allure-results --clean -o allure-report
           - ls -la allure-report
