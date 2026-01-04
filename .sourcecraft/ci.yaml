@@ -135,6 +135,7 @@ tasks:
           - sed -i 's/your-clickhouse-host-here/$CLICKHOUSE_HOST/g' .env
           - sed -i 's/your-password-here/$CLICKHOUSE_PASSWORD/g' .env
           - sed -i 's/your-token-here/$WS_TOKEN/g' .env
+          - cat .env
           - docker-compose up -d --build
           - cd $SOURCECRAFT_WORKSPACE/testing/api_tests
           - python -m venv .venv
