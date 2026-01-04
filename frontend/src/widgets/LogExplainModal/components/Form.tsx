@@ -82,20 +82,12 @@ const LogExplainForm = ({ filters }: { filters: FilterData[] }) => {
       const filters = {
         start_date: values.startTime.toISOString(),
         end_date: values.endTime.toISOString(),
+        product: values.product,
         service: values.service,
+        environment: values.environment,
       };
 
-      const userNote =
-        values.comment && values.comment.trim().length > 0
-          ? `Учти: ${values.comment.trim()}`
-          : "";
-
-      const prompt = `Проанализируй логи для сервиса ${
-        values.service
-      } в окружении ${
-        values.environment
-      } за период с ${values.startTime.toLocaleString()} по ${values.endTime.toLocaleString()}. Предоставь детальный анализ и рекомендации. ${userNote}`;
-
+      const prompt = "Найди ошибку и объясни из-за чего она возникла";
       const analysisParams = { filters, prompt };
       setAnalysisParams(analysisParams);
 
