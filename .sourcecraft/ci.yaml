@@ -145,13 +145,11 @@ tasks:
           - cp .env.example .env
           - sed -i 's/api_base_url/http:\/\/localhost:8080\//g' .env
           - pytest --alluredir=allure-results
-          - apt install allure -y
-          - allure generate allure-results --clean -o allure-report
-          - ls -la allure-report
+          - ls -la allure-results
         artifacts:
           paths:
-            - testing/allure-report
-            - testing/allure-results
+            - testing/api_tests/allure-report
+            - testing/api_tests/allure-results
 
   - name: analytics-linters
     cubes:
