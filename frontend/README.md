@@ -1,69 +1,121 @@
-# React + TypeScript + Vite
+# Frontend Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Современное веб-приложение, построенное на React с использованием TypeScript, Vite и Tailwind CSS.
 
-Currently, two official plugins are available:
+## Технологический стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** - современная библиотека для создания пользовательских интерфейсов
+- **TypeScript** - типизированный JavaScript для повышения надежности кода
+- **Vite** - быстрый инструмент сборки для современной веб-разработки
+- **Tailwind CSS** - utility-first CSS фреймворк для быстрого создания интерфейсов
+- **Redux Toolkit** - управление состоянием приложения
+- **React Hook Form** - управление формами
+- **Zod** - валидация схем данных
+- **Radix UI** - доступные и настраиваемые компоненты интерфейса
 
-## Expanding the ESLint configuration
+## Структура проекта
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── components/     # Переиспользуемые UI компоненты
+├── features/       # Функциональные модули (DatePicker, TimePicker)
+├── pages/         # Страницы приложения
+├── widgets/       # Сложные виджеты (LogExplainModal)
+├── api/           # API клиенты и схемы
+├── lib/           # Утилиты и хелперы
+├── consts/        # Константы приложения
+└── mocks/         # Моки для тестирования
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Разработка
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Установка зависимостей
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+```
+
+### Запуск в режиме разработки
+
+```bash
+npm run dev
+```
+
+Приложение будет доступно по адресу: http://localhost:5173
+
+### Сборка проекта
+
+```bash
+npm run build
+```
+
+### Предварительный просмотр сборки
+
+```bash
+npm run preview
+```
+
+### Линтинг и тестирование
+
+```bash
+npm run lint      # Проверка кода ESLint
+npm run test      # Запуск тестов Vitest
+```
+
+## Production развертывание
+
+### Вариант 1: Docker (рекомендуется)
+
+#### Сборка Docker образа
+
+```bash
+docker build -t frontend-app .
+```
+
+#### Запуск контейнера
+
+```bash
+docker run -d -p 5173:5173 --name frontend frontend-app
+```
+
+Приложение будет доступно по адресу: http://localhost:5173
+
+#### Использование Docker Compose
+
+Создайте `docker-compose.yml`:
+
+```yaml
+version: "3.8"
+services:
+  frontend:
+    build: .
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+```
+
+Запуск:
+
+```bash
+docker compose up -d
+```
+
+### Вариант 2: Ручное развертывание
+
+#### 1. Сборка проекта
+
+```bash
+npm run build
+```
+
+#### 2. Установка веб-сервера
+
+```bash
+npm install -g serve
+```
+
+#### 3. Запуск веб-сервера
+
+```bash
+serve -s dist -l 5173
 ```
