@@ -26,7 +26,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [input, setInput] = useState("");
   const [newChat] = useNewChatMutation();
-  const [chatTurn] = useChatTurnMutation();
+  const [chatTurn, { isLoading: isSending }] = useChatTurnMutation();
   const [autoAnalysis] = useAutoAnalysisMutation();
   const [isInitializing, setIsInitializing] = useState(false);
   const clearAnalysisParams = useLogStore((state) => state.clearAnalysisParams);
@@ -179,10 +179,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
   };
 
   return (
-    <div
-      className="w-full max-h-full h-full flex flex-col"
-      data-test-id="chat-with-ai"
-    >
+    <div className="w-full h-full flex flex-col" data-test-id="chat-with-ai">
       <div
         className="flex items-center gap-2 p-3 text-[#2463EB]"
         data-test-id="chat-header"
@@ -190,30 +187,35 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
         <Bot />
         <span className="font-semibold">Ответ AI ассистента</span>
       </div>
-      <ScrollArea
-        className="h-full py-2 px-2"
-        data-test-id="chat-messages-scroll"
-      >
-        {messages.length > 0 &&
-          messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "bg-[#F8FAFC] ml-auto text-black w-fit"
-                  : "bg-none text-gray-900"
-              }`}
-              data-test-id={`chat-message-${msg.role}`}
-            >
-              {msg.text}
-            </div>
-          ))}
-      </ScrollArea>
+
+      <div className="flex-4 max-h-full min-h-0">
+        <ScrollArea
+          className="h-full px-2 py-2"
+          data-test-id="chat-messages-scroll"
+        >
+          {messages.length > 0 &&
+            messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`p-3 rounded-2xl max-w-[80%] whitespace-pre-wrap ${
+                  msg.role === "user"
+                    ? "bg-[#F8FAFC] ml-auto text-black w-fit"
+                    : "bg-none text-gray-900"
+                }`}
+                data-test-id={`chat-message-${msg.role}`}
+              >
+                {msg.text}
+              </div>
+            ))}
+        </ScrollArea>
+      </div>
+
       <div
-        className="flex gap-2 p-2 border-t bg-white sticky bottom-0"
+        className="flex w-full min-h-fit flex-1 gap-2 p-2 border-t bg-white"
         data-test-id="chat-input-wrapper"
       >
         <Input
+          className="flex-1 min-w-0 active:shadow-0"
           placeholder="Задать вопрос или уточнение..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -222,7 +224,7 @@ export const ChatWithAI = ({ autoAnalysisParams }: ChatWithAIProps) => {
         />
         <Button
           onClick={sendMessage}
-          disabled={false}
+          disabled={isSending}
           data-test-id="chat-send-button"
         >
           ➤
