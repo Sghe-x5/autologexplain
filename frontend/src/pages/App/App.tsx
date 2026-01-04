@@ -20,23 +20,23 @@ function App() {
   useEffect(() => {
     const saved = localStorage.getItem(FILTERS_KEY);
 
-    if (saved) {
-      try {
+    try {
+      if (saved) {
         setFilters(JSON.parse(saved) as FilterData[]);
         setFiltersLoaded(true);
-      } catch {
-        console.warn("localStorage filters parse error, fallback to API");
       }
+    } catch {
+      console.warn("localStorage filters parse error, fallback to API");
     }
-
-    if (!saved) {
+    try {
       GetFilters()
         .then((data) => {
           setFilters(data);
           localStorage.setItem(FILTERS_KEY, JSON.stringify(data));
         })
+        .catch((err) => console.error(err))
         .finally(() => setFiltersLoaded(true));
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {

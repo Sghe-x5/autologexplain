@@ -1,7 +1,8 @@
-const api = "158.160.158.175:8080";
+const ip = "84.201.181.1";
 
-export const FILTER_URL = `http://${api}/logs/tree`; //http://46.21.246.90:8080/logs/tree
+const api = ip;
+export const FILTER_URL = `http://${api}/api/logs/tree`; //http://46.21.246.90:8080/logs/tree
 
-export const baseUrl = `http://${api}`;
+export const baseUrl = `http://${api}/api`;
 
-export const WS_BASE = `ws://${api}`;
+export const WS_BASE = `ws://${api}/api`;
