@@ -6,9 +6,6 @@ interface TimePickerProps {
   onChange?: (time: { hours: number; minutes: number }) => void;
 }
 
-// const clamp = (num: number, min: number, max: number) =>
-//   Math.min(Math.max(num, min), max);
-
 const TimePicker = ({ value, onChange }: TimePickerProps) => {
   const time = {
     hours: value?.hours ?? 0,
@@ -95,14 +92,21 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-3">
-      <div className="flex justify-center items-center gap-2">
+    <div className="flex flex-col gap-4 p-3" data-test-id="time-picker">
+      <div
+        className="flex justify-center items-center gap-2"
+        data-test-id="time-picker-display"
+      >
         <div
           className="flex w-14 h-[28px] relative border border-input rounded-md shadow-xs select-none"
           tabIndex={-1}
           aria-label="Hours"
+          data-test-id="time-picker-hours"
         >
-          <div className="flex-1 pl-2 flex items-center bg-transparent">
+          <div
+            className="flex-1 pl-2 flex items-center bg-transparent"
+            data-test-id="time-picker-hours-value"
+          >
             {time.hours.toString().padStart(2, "0")}
           </div>
           <div className="flex flex-col items-center justify-center pr-2">
@@ -112,6 +116,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
               onClick={incrementHours}
               aria-label="Increase hours"
               className="p-0 m-0 text-sm flex items-center justify-center cursor-pointer"
+              data-test-id="increase-hours-button"
             >
               <ChevronUpIcon className="w-3 h-3" aria-hidden="true" />
             </button>
@@ -121,13 +126,17 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
               onClick={decrementHours}
               aria-label="Decrease hours"
               className="p-0 m-0 text-sm flex items-center justify-center cursor-pointer"
+              data-test-id="decrease-hours-button"
             >
               <ChevronDownIcon className="w-3 h-3" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        <span className="text-xl font-semibold select-none relative top-[-2px]">
+        <span
+          className="text-xl font-semibold select-none relative top-[-2px]"
+          data-test-id="time-picker-separator"
+        >
           :
         </span>
 
@@ -135,8 +144,12 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
           className="flex w-14 h-[28px] relative border border-input rounded-md shadow-xs select-none"
           tabIndex={-1}
           aria-label="Minutes"
+          data-test-id="time-picker-minutes"
         >
-          <div className="flex-1 pl-2 flex items-center bg-transparent">
+          <div
+            className="flex-1 pl-2 flex items-center bg-transparent"
+            data-test-id="time-picker-minutes-value"
+          >
             {time.minutes.toString().padStart(2, "0")}
           </div>
           <div className="flex flex-col items-center justify-center pr-2">
@@ -146,6 +159,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
               onClick={incrementMinutes}
               aria-label="Increase minutes"
               className="p-0 m-0 text-sm flex items-center justify-center cursor-pointer"
+              data-test-id="increase-minutes-button"
             >
               <ChevronUpIcon className="w-3 h-3" aria-hidden="true" />
             </button>
@@ -155,6 +169,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
               onClick={decrementMinutes}
               aria-label="Decrease minutes"
               className="p-0 m-0 text-sm flex items-center justify-center cursor-pointer"
+              data-test-id="decrease-minutes-button"
             >
               <ChevronDownIcon className="w-3 h-3" aria-hidden="true" />
             </button>
@@ -162,9 +177,12 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
         </div>
       </div>
 
-      <div className="flex gap-1 h-[250px] items-center">
+      <div
+        className="flex gap-1 h-[250px] items-center"
+        data-test-id="time-picker-scrolls"
+      >
         <div
-          data-test-id="input-hour-div"
+          data-test-id="hour-scroll"
           ref={hourRef}
           className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
           onScroll={() => loopScroll(hourRef, hours.length)}
@@ -173,6 +191,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
             <div
               key={`h-${i}`}
               onClick={() => handleClickHour(h)}
+              data-test-id={`hour-option-${h}`}
               className={`cursor-pointer px-4 py-1 h-8 mb-1 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
                 h === time.hours
                   ? "bg-blue-500 text-white"
@@ -184,7 +203,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
           ))}
         </div>
         <div
-          data-test-id="input-minute-div"
+          data-test-id="minute-scroll"
           ref={minuteRef}
           className="flex-1 h-full overflow-y-auto scrollbar-hide text-center"
           onScroll={() => loopScroll(minuteRef, minutes.length)}
@@ -193,6 +212,7 @@ const TimePicker = ({ value, onChange }: TimePickerProps) => {
             <div
               key={`m-${i}`}
               onClick={() => handleClickMinute(m)}
+              data-test-id={`minute-option-${m}`}
               className={`cursor-pointer px-4 py-1 h-8 mb-1 flex items-center justify-center text-sm rounded-md transition-colors duration-200 ${
                 m === time.minutes
                   ? "bg-blue-500 text-white"
