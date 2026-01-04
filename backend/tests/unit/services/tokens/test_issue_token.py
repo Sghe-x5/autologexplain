@@ -3,7 +3,6 @@ import json
 import time
 
 import pytest
-
 from backend.core.config import get_settings
 from backend.services.tokens import TokenSecretError, issue_chat_token
 
