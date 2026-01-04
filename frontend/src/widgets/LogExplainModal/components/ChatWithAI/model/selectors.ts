@@ -18,5 +18,6 @@ export const selectUnreadMessages = (
   return idx === -1 ? items : items.slice(idx + 1);
 };
 
-export const selectPinnedMessages = (items: ChatItem[]) =>
-  items.filter((m: any) => m.pinned === true);
+export type PinnedChatItem = ChatItem & { pinned?: boolean };
+export const selectPinnedMessages = (items: PinnedChatItem[]) =>
+  items.filter((m) => m.pinned === true);
