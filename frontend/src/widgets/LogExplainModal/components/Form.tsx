@@ -30,6 +30,8 @@ import { useLogStore } from "../model/store";
 import { getPeriod } from "@/lib/getPeriod";
 import { Sparkles } from "lucide-react";
 
+import { FILTERS } from "@/mocks/filter.mock";
+
 const mockData: UserLogExplanation = {
   userId: 123,
   period: null,
@@ -56,7 +58,6 @@ const LogExplainForm = () => {
       product: "",
       service: "",
       environment: "",
-      // userID: "",
       startTime: new Date(),
       endTime: new Date(),
     },
@@ -91,6 +92,11 @@ const LogExplainForm = () => {
   const isFormDisabled =
     !form.formState.isValid || form.formState.isSubmitting;
 
+  const productData = FILTERS.find((p) => p.product === watchProduct);
+  const serviceData = productData?.services.find(
+    (s) => s.service === watchService
+  );
+
   return (
     <Form {...form}>
       <form
@@ -122,8 +128,11 @@ const LogExplainForm = () => {
                 </FormControl>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="productA">Product A</SelectItem>
-                    <SelectItem value="productB">Product B</SelectItem>
+                    {FILTERS.map((p) => (
+                      <SelectItem key={p.product} value={p.product} className="cursor-pointer">
+                        {p.product}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -157,11 +166,11 @@ const LogExplainForm = () => {
                 </FormControl>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="catService">catService</SelectItem>
-                    <SelectItem value="paymentService">
-                      paymentService
-                    </SelectItem>
-                    <SelectItem value="userService">userService</SelectItem>
+                    {productData?.services.map((s) => (
+                      <SelectItem key={s.service} value={s.service} className="cursor-pointer">
+                        {s.service}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -194,9 +203,11 @@ const LogExplainForm = () => {
                 </FormControl>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="dev">DEV</SelectItem>
-                    <SelectItem value="stage">STAGE</SelectItem>
-                    <SelectItem value="prod">PROD</SelectItem>
+                    {serviceData?.environments.map((env) => (
+                      <SelectItem key={env} value={env} className="cursor-pointer">
+                        {env}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
