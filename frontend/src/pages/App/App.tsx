@@ -5,14 +5,43 @@ import { BotAnswer } from "@/widgets/LogExplainModal/components/BotAnswer";
 import { Bot } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import clsx from "clsx";
 
 function App() {
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
+
   return (
     <>
       {isModalOpen && (
-        <div className="p-5">
-          <div className="flex gap-3 items-center">
+        <div
+          className="fixed inset-0 bg-[#18181B99] backdrop-blur-sm z-40"
+          onClick={() => setModalOpen(false)}
+        />
+      )}
+
+      <div
+        className={clsx(
+          "fixed top-0 right-0 h-full w-1/2 bg-white shadow-lg z-50 transform transition-transform duration-800",
+          isModalOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        <div className="p-5 modal h-full overflow-y-auto relative">
+          <button
+            onClick={() => setModalOpen(false)}
+            className="absolute top-5 right-5 text-[#71717A] hover:text-[#2463EB] transition-colors cursor-pointer"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 32 32"
+              fill="currentColor"
+            >
+              <path d="M17.06 16l7.97 7.97-1.06 1.06L16 17.06l-7.97 7.97-1.06-1.06L14.94 16 6.97 8.03l1.06-1.06L16 14.94l7.97-7.97 1.06 1.06L17.06 16z" />
+            </svg>
+          </button>
+
+          <div className="flex gap-3 items-center mt-[8px]">
             <div className="p-4 w-fit bg-[#DBE9FE] rounded-lg">
               <Bot color="#2463EB" />
             </div>
@@ -21,7 +50,7 @@ function App() {
                 AI Ассистент
               </h1>
               <p className="text-[#64748b] font-[400] text-[16px]">
-                Задайте параметры для анализа логов
+                Задайте параметры для анализа логов
               </p>
             </div>
           </div>
@@ -31,11 +60,13 @@ function App() {
           <Separator className="my-8" />
           <BotAnswer />
         </div>
-      )}
+      </div>
+
+      {!isModalOpen && 
       <Button
         data-test-id="open-modal-button"
-        onClick={() => setModalOpen(!isModalOpen)}
-        className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 z-40 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-2 border-white/20 hover:scale-110 cursor-pointer"
+        onClick={() => setModalOpen(true)}
+        className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-xl transition-all duration-300 z-50 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-2 border-white/20 hover:scale-110 cursor-pointer"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -58,6 +89,7 @@ function App() {
         </svg>
         <span className="sr-only">Открыть ИИ Ассистента</span>
       </Button>
+      }
     </>
   );
 }
