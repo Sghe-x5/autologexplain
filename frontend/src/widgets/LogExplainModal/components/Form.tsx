@@ -1,4 +1,4 @@
-import { Input } from "@/components/ui/input";
+import { FormInput as Input } from "./FormInput";
 import DatePicker from "@/features/DatePicker/DatePicker";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,6 @@ import {
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Calendar, Zap, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   logFormSchema,
@@ -29,6 +28,7 @@ import {
 } from "../model/types";
 import { useLogStore } from "../model/store";
 import { getPeriod } from "@/lib/getPeriod";
+import { Sparkles } from "lucide-react";
 
 const mockData: UserLogExplanation = {
   userId: 123,
@@ -61,7 +61,7 @@ const LogExplainForm = () => {
   });
 
   const setLog = useLogStore((state) => state.setLog);
-  const resetLog = useLogStore((state) => state.reset);
+  // const resetLog = useLogStore((state) => state.reset);
 
   const onSubmit = (values: LogExplanation) => {
     mockData.userId = Number(values.userID);
@@ -73,30 +73,39 @@ const LogExplainForm = () => {
     setLog(mockData);
   };
 
-  const onReset = () => {
-    form.reset();
-    resetLog();
-  };
+  // const onReset = () => {
+  //   form.reset();
+  //   resetLog();
+  // };
+  const interactiveField =
+    "border border-gray-300 rounded-md transition-colors duration-200 " +
+    "hover:border-[#2463EB] focus-within:border-[#2463EB] " +
+    "focus-within:ring-2 focus-within:ring-[#93C5FD]/40";
+
+  const isFormFiled = !form.formState.isValid || form.formState.isSubmitting;
 
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 flex flex-col gap-4"
+        className="space-y-6 flex flex-col"
       >
         <FormField
           control={form.control}
           name="service"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                <Zap />
-                Выберите сервис
-              </FormLabel>
+              <FormLabel>Сервис</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger className="w-full" data-test-id="analised-service-select">
-                    <SelectValue placeholder="Выберите сервис для анализа" data-test-id="selected-service-span"/>
+                  <SelectTrigger
+                    className={`w-full ${interactiveField}`}
+                    data-test-id="analised-service-select"
+                  >
+                    <SelectValue
+                      placeholder="Выберите сервис для анализа"
+                      data-test-id="selected-service-span"
+                    />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -121,20 +130,41 @@ const LogExplainForm = () => {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="userID"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>ID пользователя</FormLabel>
+              <FormControl data-test-id="identifier-input">
+                <Input
+                  placeholder="Введите userId, sessionId или идентификатор"
+                  {...field}
+                  className={interactiveField}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormItem>
-          <FormLabel>
-            <Calendar className="inline-block mr-2" />
-            Временной диапазон
-          </FormLabel>
-          <div className="flex flex-col gap-4">
+          <FormLabel>Укажите период для анализа</FormLabel>
+          <div className="flex gap-4">
             <FormField
               control={form.control}
               name="startTime"
               render={({ field }) => (
-                <FormItem className="w-full">
+                <FormItem className="flex-1">
                   <FormLabel>Время начала</FormLabel>
                   <FormControl>
-                    <DatePicker label="" value={field.value} onChange={field.onChange} />
+                    <div className={interactiveField}>
+                      <DatePicker
+                        label=""
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -144,10 +174,16 @@ const LogExplainForm = () => {
               control={form.control}
               name="endTime"
               render={({ field }) => (
-                <FormItem className="w-full">
+                <FormItem className="flex-1">
                   <FormLabel>Время окончания</FormLabel>
                   <FormControl>
-                    <DatePicker label="" value={field.value} onChange={field.onChange} />
+                    <div className={interactiveField}>
+                      <DatePicker
+                        label=""
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -156,45 +192,28 @@ const LogExplainForm = () => {
           </div>
         </FormItem>
 
-        <FormField
-          control={form.control}
-          name="userID"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <User /> ID пользователя
-              </FormLabel>
-              <FormControl  data-test-id="identifier-input">
-                <Input
-                  placeholder="Введите userId, sessionId или идентификатор"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <Separator />
 
         <div className="flex gap-2">
           <Button
             data-test-id="analyse-logs-button"
             type="submit"
-            className="flex-11/12"
-            disabled={!form.formState.isValid || form.formState.isSubmitting}
+            className="flex-[11] bg-[#93C5FD] text-[#FAFAFA] hover:bg-[#93C5FD] hover:border hover:border-[#2463EB]"
+            disabled={isFormFiled}
           >
-            Анализировать логи
+            <Sparkles /> Анализировать логи
           </Button>
-          <Button
-            data-test-id="reset-form-button"
-            type="button"
-            className="flex-1/12"
-            variant="secondary"
-            onClick={onReset}
-          >
-            Сбросить
-          </Button>
+          {/* 
+    <Button
+      data-test-id="reset-form-button"
+      type="button"
+      className="flex-[1]"
+      variant="secondary"
+      onClick={onReset}
+    >
+      Сбросить
+    </Button> 
+    */}
         </div>
       </form>
     </Form>
