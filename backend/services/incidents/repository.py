@@ -506,12 +506,86 @@ def insert_slo_burn(rows: list[dict[str, Any]]) -> None:
     _insert_rows("slo_burn", columns, rows)
 
 
+def fetch_dependency_graph() -> list[dict[str, Any]]:
+    sql = """
+        SELECT
+            source_service,
+            target_service,
+            argMax(criticality, updated_at) AS criticality,
+            max(updated_at) AS max_updated_at
+        FROM service_dependency_graph
+        GROUP BY source_service, target_service
+    """
+    return query(sql)
 
 
+def fetch_incident_trace_ids(incident_id: str, limit: int = 200) -> list[str]:
+    rows = fetch_incident_events(incident_id, limit)
+    out: list[str] = []
+    for row in rows:
+        if row.get("event_type") != "candidate_attached":
+            continue
+        payload = row.get("payload")
+        if not isinstance(payload, str):
+            continue
+        try:
+            data = json.loads(payload)
+        except Exception:
+            continue
+        trace_ids = data.get("trace_ids") if isinstance(data, dict) else None
+        if isinstance(trace_ids, list):
+            for trace_id in trace_ids:
+                if isinstance(trace_id, str) and trace_id:
+                    out.append(trace_id)
+
+    dedup: list[str] = []
+    seen: set[str] = set()
+    for trace_id in out:
+        if trace_id in seen:
+            continue
+        seen.add(trace_id)
+        dedup.append(trace_id)
+    return dedup
 
 
+def fetch_trace_service_first_seen(
+    *,
+    trace_ids: list[str],
+    lookback_minutes: int,
+) -> dict[str, datetime]:
+    if not trace_ids:
+        return {}
+
+    settings = get_settings()
+    sql_list = ", ".join(_quote_sql(trace_id) for trace_id in trace_ids[:500])
+    sql = f"""
+        SELECT service, min(timestamp) AS first_seen
+        FROM {settings.CLICKHOUSE_TABLE}
+        WHERE trace_id IN ({sql_list})
+          AND timestamp >= now() - toIntervalMinute(%(lookback_minutes)s)
+          AND service != ''
+        GROUP BY service
+    """
+    rows = query(sql, {"lookback_minutes": max(lookback_minutes, 1)})
+    out: dict[str, datetime] = {}
+    for row in rows:
+        service = str(row.get("service") or "")
+        dt = parse_dt(row.get("first_seen"))
+        if service and dt:
+            out[service] = dt
+    return out
 
 
+def fetch_recent_incident_anomaly(incident_id: str) -> float:
+    sql = """
+        SELECT argMax(anomaly_score, updated_at) AS anomaly_score
+        FROM incident_candidates
+        WHERE incident_id = %(incident_id)s
+    """
+    rows = query(sql, {"incident_id": incident_id})
+    if not rows:
+        return 0.0
+    return float(rows[0].get("anomaly_score") or 0.0)
 
 
 def parse_card_timestamp(card: Mapping[str, Any], field: str) -> datetime | None:

@@ -78,6 +78,17 @@ _DDL_STATEMENTS: tuple[str, ...] = (
     ORDER BY (incident_id, event_time, event_id)
     """,
     """
+    CREATE TABLE IF NOT EXISTS service_dependency_graph (
+        edge_id String,
+        source_service String,
+        target_service String,
+        criticality Float64,
+        updated_at DateTime
+    )
+    ENGINE = ReplacingMergeTree(updated_at)
+    ORDER BY (source_service, target_service)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS slo_burn (
         burn_id String,
         window_start DateTime,

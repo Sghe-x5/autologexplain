@@ -8,13 +8,41 @@ from uuid import uuid4
 
 from loguru import logger
 
-from backend.services.incidents.constants import ACTIVE_INCIDENT_STATUSES, ALLOWED_TRANSITIONS, DEFAULT_PROD_WEIGHT, INCIDENT_STATUSES, NON_PROD_WEIGHT, SEVERITY_CRITICAL_RATE, SLO_WINDOWS
+from backend.services.incidents.constants import (
+    ACTIVE_INCIDENT_STATUSES,
+    ALLOWED_TRANSITIONS,
+    DEFAULT_PROD_WEIGHT,
+    INCIDENT_STATUSES,
+    NON_PROD_WEIGHT,
+    RCA_SCORE_WEIGHTS,
+    SEVERITY_CRITICAL_RATE,
+    SLO_WINDOWS,
+)
 from backend.services.incidents.redis_cache import (
     cache_incident_card,
     get_cached_incident,
     invalidate_incident_cache,
 )
-from backend.services.incidents.repository import delete_incident_records, fetch_incident_card, fetch_incident_events, fetch_latest_burn_rates, fetch_latest_incident_for_key, fetch_pending_candidates, fetch_recent_logs, insert_incident_events, insert_incident_snapshots, insert_slo_burn, list_incidents, parse_card_timestamp, upsert_candidates
+from backend.services.incidents.repository import (
+    delete_incident_records,
+    fetch_active_incidents,
+    fetch_dependency_graph,
+    fetch_incident_card,
+    fetch_incident_events,
+    fetch_incident_trace_ids,
+    fetch_latest_burn_rates,
+    fetch_latest_incident_for_key,
+    fetch_pending_candidates,
+    fetch_recent_incident_anomaly,
+    fetch_recent_logs,
+    fetch_trace_service_first_seen,
+    insert_incident_events,
+    insert_incident_snapshots,
+    insert_slo_burn,
+    list_incidents,
+    parse_card_timestamp,
+    upsert_candidates,
+)
 from backend.services.incidents.schema import ensure_incident_tables
 from backend.services.incidents.utils import (
     make_deterministic_id,
@@ -605,6 +633,153 @@ def run_correlator_cycle(
     }
 
 
+def run_rca_cycle(*, max_incidents: int, trace_lookback_minutes: int) -> dict[str, int]:
+    ensure_ready()
+
+    active = fetch_active_incidents(max_incidents)
+    if not active:
+        return {"processed": 0, "updated": 0}
+
+    edges = fetch_dependency_graph()
+    neighbors: dict[str, set[str]] = defaultdict(set)
+    fanout: dict[str, int] = defaultdict(int)
+    criticality: dict[str, float] = defaultdict(lambda: 0.5)
+
+    for edge in edges:
+        source = _as_str(edge.get("source_service"))
+        target = _as_str(edge.get("target_service"))
+        crit = float(edge.get("criticality") or 0.5)
+        if not source or not target:
+            continue
+        neighbors[source].add(target)
+        neighbors[target].add(source)
+        fanout[source] += 1
+        criticality[source] = max(criticality[source], min(max(crit, 0.0), 1.0))
+        criticality[target] = max(criticality[target], min(max(crit * 0.8, 0.0), 1.0))
+
+    max_fanout = max(1, max(fanout.values(), default=1))
+
+    now = utcnow()
+    snapshots: list[dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
+
+    for incident in active:
+        incident_id = _as_str(incident.get("incident_id"))
+        service = _as_str(incident.get("service"), "unknown")
+        environment = _as_str(incident.get("environment"), "unknown")
+        severity = _as_str(incident.get("severity"), "info")
+        status = _as_str(incident.get("status"), "open")
+
+        trace_ids = fetch_incident_trace_ids(incident_id)
+        first_seen = fetch_trace_service_first_seen(
+            trace_ids=trace_ids,
+            lookback_minutes=trace_lookback_minutes,
+        )
+
+        ordered_services = sorted(first_seen.items(), key=lambda item: item[1])
+        earliness_scores: dict[str, float] = {}
+        total_order = max(1, len(ordered_services) - 1)
+        for index, (svc, _) in enumerate(ordered_services):
+            earliness_scores[svc] = 1.0 - (index / total_order)
+
+        anomaly_component = min(1.0, max(fetch_recent_incident_anomaly(incident_id), 0.0) / 10.0)
+
+        candidates = {service}
+        candidates.update(neighbors.get(service, set()))
+        candidates.update(earliness_scores.keys())
+
+        best_service = service
+        best_score = -1.0
+        best_breakdown: dict[str, float] = {}
+
+        for candidate_service in candidates:
+            anomaly_score = anomaly_component if candidate_service == service else anomaly_component * 0.6
+            earliness_score = earliness_scores.get(candidate_service, 0.0)
+            fanout_score = min(1.0, fanout.get(candidate_service, 0) / max_fanout)
+            criticality_score = min(max(criticality.get(candidate_service, 0.5), 0.0), 1.0)
+
+            score = (
+                RCA_SCORE_WEIGHTS["anomaly"] * anomaly_score
+                + RCA_SCORE_WEIGHTS["earliness"] * earliness_score
+                + RCA_SCORE_WEIGHTS["fanout"] * fanout_score
+                + RCA_SCORE_WEIGHTS["criticality"] * criticality_score
+            )
+
+            if score > best_score:
+                best_score = score
+                best_service = candidate_service
+                best_breakdown = {
+                    "anomaly": anomaly_score,
+                    "earliness": earliness_score,
+                    "fanout": fanout_score,
+                    "criticality": criticality_score,
+                }
+
+        affected_services = max(1, len(first_seen))
+        critical_rate = _severity_rate(severity)
+        prod_weight = _prod_weight(environment)
+        impact_score = affected_services * critical_rate * prod_weight
+
+        burn_5m, burn_1h, burn_6h = _burn_triplet(service, environment)
+
+        evidence = _as_list_str(incident.get("evidence"))
+        context = safe_json_loads(incident.get("context_json"))
+        context["rca_breakdown"] = best_breakdown
+
+        snapshots.append(
+            _build_snapshot(
+                base=incident,
+                incident_id=incident_id,
+                version=_next_version(now),
+                fingerprint=_as_str(incident.get("fingerprint")),
+                title=_as_str(incident.get("title"), _build_incident_title(service, "unknown", severity)),
+                status=status,
+                service=service,
+                environment=environment,
+                category=_as_str(incident.get("category"), "unknown"),
+                severity=severity,
+                opened_at=parse_card_timestamp(incident, "opened_at") or now,
+                acknowledged_at=parse_card_timestamp(incident, "acknowledged_at"),
+                mitigated_at=parse_card_timestamp(incident, "mitigated_at"),
+                resolved_at=parse_card_timestamp(incident, "resolved_at"),
+                last_seen_at=parse_card_timestamp(incident, "last_seen_at") or now,
+                root_cause_service=best_service,
+                root_cause_score=max(best_score, 0.0),
+                impact_score=impact_score,
+                burn_rate_5m=burn_5m,
+                burn_rate_1h=burn_1h,
+                burn_rate_6h=burn_6h,
+                affected_services=affected_services,
+                critical_rate=critical_rate,
+                prod_weight=prod_weight,
+                evidence=evidence,
+                context=context,
+                created_at=parse_card_timestamp(incident, "created_at") or now,
+                updated_at=now,
+            )
+        )
+
+        events.append(
+            _create_event(
+                incident_id=incident_id,
+                event_type="rca_recomputed",
+                actor="rca-worker",
+                event_time=now,
+                payload={
+                    "root_cause_service": best_service,
+                    "root_cause_score": max(best_score, 0.0),
+                    "impact_score": impact_score,
+                    "breakdown": best_breakdown,
+                },
+            )
+        )
+
+        invalidate_incident_cache(incident_id)
+
+    insert_incident_snapshots(snapshots)
+    insert_incident_events(events)
+
+    return {"processed": len(active), "updated": len(snapshots)}
 
 
 def get_incident(incident_id: str) -> dict[str, Any] | None:

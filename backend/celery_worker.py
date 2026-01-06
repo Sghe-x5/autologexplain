@@ -11,6 +11,7 @@ from backend.db.storage import add_message
 from backend.services.incidents import log_cycle_result
 from backend.services.incidents import run_correlator_cycle as run_correlator_cycle_engine
 from backend.services.incidents import run_detector_cycle as run_detector_cycle_engine
+from backend.services.incidents import run_rca_cycle as run_rca_cycle_engine
 from backend.services.incidents.redis_cache import distributed_lock
 from backend.services.llm_service import ask_llm
 from backend.services.signals import (
@@ -53,6 +54,10 @@ celery_app.conf.update(
         "incident-correlator-worker": {
             "task": "incident.correlator_worker",
             "schedule": max(60, int(s.INCIDENT_CORRELATOR_INTERVAL_MINUTES) * 60),
+        },
+        "incident-rca-worker": {
+            "task": "incident.rca_worker",
+            "schedule": max(60, int(s.INCIDENT_RCA_INTERVAL_MINUTES) * 60),
         },
     },
 )
@@ -259,3 +264,17 @@ def run_incident_correlator() -> None:
         log_cycle_result("correlator-worker", result)
 
 
+@celery_app.task(name="incident.rca_worker")
+def run_incident_rca() -> None:
+    with distributed_lock(
+        "rca-worker",
+        ttl_seconds=max(int(s.INCIDENT_JOB_LOCK_TTL_SECONDS), 30),
+    ) as acquired:
+        if not acquired:
+            logger.info("incident.rca_worker skipped: lock is already held")
+            return
+        result = run_rca_cycle_engine(
+            max_incidents=int(s.INCIDENT_RCA_MAX_INCIDENTS),
+            trace_lookback_minutes=int(s.INCIDENT_RCA_TRACE_LOOKBACK_MINUTES),
+        )
+        log_cycle_result("rca-worker", result)
