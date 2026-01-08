@@ -35,6 +35,7 @@ from pydantic import BaseModel
 from backend.core.config import get_settings
 from backend.db.db import query as ch_query
 from backend.services.dependency_graph import build_graph_from_traces
+from backend.services.log_clustering import extract_templates
 from backend.services.log_tags import enrich_log_record
 from backend.services.slo_tracker import compute_all_services_slo
 
@@ -132,3 +133,39 @@ def dependency_graph(
 
 
 
+@router.get("/templates")
+def log_templates(
+    hours: int  = Query(default=1, ge=1, le=24),
+    limit: int  = Query(default=500, ge=1, le=2000),
+    top_n: int  = Query(default=20, ge=1, le=100, description="Number of templates to return"),
+):
+    """
+    Extract log message templates using the Drain algorithm.
+
+    Groups structurally similar messages and replaces variable parts (IPs,
+    numbers, UUIDs) with ``<*>``.  Useful for alert deduplication and
+    identifying recurring error patterns.
+    """
+    s = get_settings()
+    sql = f"""
+        SELECT timestamp, service, level, status_code, message, metadata
+        FROM {s.CLICKHOUSE_TABLE}
+        WHERE timestamp >= now() - INTERVAL {hours} HOUR
+        ORDER BY timestamp DESC
+        LIMIT {limit}
+    """
+    try:
+        rows = ch_query(sql, {})
+    except Exception as exc:
+        logger.exception("rca templates: clickhouse error")
+        raise HTTPException(status_code=500, detail="failed_to_fetch_logs") from exc
+
+    enriched = [enrich_log_record(r) for r in rows]
+    result   = extract_templates(enriched, top_n=top_n)
+
+    return {
+        "templates":        result["templates"],
+        "total_logs":       result["total_logs"],
+        "unique_templates": result["unique_templates"],
+        "hours":            hours,
+    }
