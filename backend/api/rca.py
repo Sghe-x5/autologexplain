@@ -60,24 +60,34 @@ def _load_incident(fp: str) -> Optional[dict]:
     # Try new ClickHouse-backed incident store first (by fingerprint)
     try:
         sql = """
-            SELECT incident_id, max(version) AS max_version,
-                argMax(fingerprint, version) AS inc_fingerprint,
-                argMax(title, version) AS title,
-                argMax(status, version) AS status,
-                argMax(service, version) AS service,
-                argMax(environment, version) AS environment,
-                argMax(severity, version) AS severity
-            FROM incidents
+            SELECT incident_id, max_version, fingerprint, title, status, service,
+                   environment, category, severity, affected_count, opened_at,
+                   last_seen_at, online_root_cause_service
+            FROM (
+                SELECT incident_id, max(version) AS max_version,
+                    argMax(fingerprint, version) AS fingerprint,
+                    argMax(title, version) AS title,
+                    argMax(status, version) AS status,
+                    argMax(service, version) AS service,
+                    argMax(environment, version) AS environment,
+                    argMax(category, version) AS category,
+                    argMax(severity, version) AS severity,
+                    argMax(affected_services, version) AS affected_count,
+                    argMax(opened_at, version) AS opened_at,
+                    argMax(last_seen_at, version) AS last_seen_at,
+                    argMax(root_cause_service, version) AS online_root_cause_service
+                FROM incidents
+                GROUP BY incident_id
+            )
             WHERE fingerprint = %(fp)s
-            GROUP BY incident_id
             ORDER BY max_version DESC
             LIMIT 1
         """
-        rows = ch_query(sql, {"fp": fp})
+        rows = ch_query(sql, {"fp": fp}, json_columns=[])
         if rows:
             return rows[0]
     except Exception:
-        pass
+        logger.exception("rca _load_incident: ClickHouse lookup failed, falling back to Redis")
     # Fallback: legacy Redis hash (incident V0)
     r   = _r()
     raw = r.hgetall(f"incident:{fp}")
