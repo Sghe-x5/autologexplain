@@ -17,6 +17,7 @@ from backend.services.incidents import (
     update_incident_status,
 )
 from backend.services.incidents.constants import INCIDENT_STATUSES
+from backend.services.similar_incidents import top_k_similar
 
 router = APIRouter()
 
@@ -134,6 +135,26 @@ def incident_evidence(incident_id: str, limit: int = Query(200, ge=1, le=500)):
         raise HTTPException(status_code=500, detail="failed_to_fetch_evidence") from exc
 
 
+@router.get("/{incident_id}/similar")
+def incident_similar(incident_id: str, k: int = Query(5, ge=1, le=20)):
+    """Top-k похожих инцидентов по гибридному скорингу (без embeddings)."""
+    src = get_incident(incident_id)
+    if src is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found")
+    try:
+        candidates = get_incidents(
+            limit=500, offset=0,
+            status=None, service=None, environment=None,
+            category=None, severity=None, q=None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="failed_to_fetch_incidents") from exc
+    items = candidates.get("items", []) if isinstance(candidates, dict) else candidates
+    matches = top_k_similar(src, items, k=k)
+    return {
+        "incident_id": incident_id,
+        "matches": [m.to_dict() for m in matches],
+    }
 
 
 
