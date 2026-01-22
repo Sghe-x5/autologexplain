@@ -18,6 +18,7 @@ from backend.services.incidents import (
 )
 from backend.services.incidents.constants import INCIDENT_STATUSES
 from backend.services.similar_incidents import top_k_similar
+from backend.services.postmortem import PostmortemInput, generate_postmortem
 
 router = APIRouter()
 
@@ -157,6 +158,50 @@ def incident_similar(incident_id: str, k: int = Query(5, ge=1, le=20)):
     }
 
 
+@router.get("/{incident_id}/postmortem")
+def incident_postmortem(incident_id: str):
+    """Автоматически сгенерированный markdown-постмортем."""
+    src = get_incident(incident_id)
+    if src is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found")
+
+    try:
+        timeline = get_timeline(incident_id, limit=200)
+    except Exception:
+        timeline = []
+
+    evidence_payload: list[dict] = []
+    try:
+        ev = get_evidence(incident_id, limit=20)
+        if isinstance(ev, dict):
+            evidence_payload = list(ev.get("candidate_evidence") or [])
+    except Exception:
+        evidence_payload = []
+
+    # similar
+    similar_dicts: list[dict] = []
+    try:
+        all_incs = get_incidents(
+            limit=500, offset=0,
+            status=None, service=None, environment=None,
+            category=None, severity=None, q=None,
+        )
+        items = all_incs.get("items", []) if isinstance(all_incs, dict) else all_incs
+        similar_dicts = [m.to_dict() for m in top_k_similar(src, items, k=5)]
+    except Exception:
+        similar_dicts = []
+
+    md = generate_postmortem(
+        PostmortemInput(
+            incident=src,
+            timeline_events=timeline,
+            evidence_candidates=evidence_payload,
+            similar_incidents=similar_dicts,
+            evidence_templates=[],
+            author="autologexplain",
+        )
+    )
+    return {"incident_id": incident_id, "markdown": md}
 
 
 @router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
