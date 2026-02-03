@@ -57,6 +57,15 @@ FEATURE_NAMES: list[str] = [
     "err_ratio_to_60m",      # current / baseline_60m
     "warn_ratio_to_60m",
     "err_slope_5m",          # наклон линейной регрессии на 5-min window
+    # SLO burn rates
+    "burn_rate_5m",
+    "burn_rate_1h",
+    "burn_rate_6h",
+    # Historical anomalies
+    "anomalies_last_60m",
+    # Календарные признаки
+    "hour_of_day",
+    "day_of_week",
 ]
 
 FEATURE_COUNT = len(FEATURE_NAMES)
@@ -301,6 +310,12 @@ def _point_features(
             err_ratio_60m,
             warn_ratio_60m,
             slope,
+            burn_5m,
+            burn_1h,
+            burn_6h,
+            float(anomalies_60m),
+            float(m.hour),
+            float(m.weekday()),
         ],
         dtype=float,
     )
