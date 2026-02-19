@@ -22,6 +22,7 @@ from backend.services.forecasting import (
     FEATURE_NAMES,
     IncidentForecaster,
     build_feature_matrix,
+    explain_prediction,
 )
 
 router = APIRouter(prefix="/forecasting", tags=["forecasting"])
@@ -129,6 +130,7 @@ def current_risk(hours: int = Query(default=2, ge=1, le=24)):
 
     try:
         probs = fc.predict_proba(latest_points)
+        explanations = explain_prediction(fc, latest_points, probs, top_n=5)
     except ModuleNotFoundError as exc:
         raise HTTPException(
             status_code=500,
@@ -136,13 +138,14 @@ def current_risk(hours: int = Query(default=2, ge=1, le=24)):
         ) from exc
 
     results = []
-    for p, prob in zip(latest_points, probs, strict=True):
+    for p, prob, expl in zip(latest_points, probs, explanations, strict=True):
         results.append(
             {
                 "service": p.service,
                 "environment": p.environment,
                 "minute": p.minute.isoformat(timespec="seconds"),
                 "risk_score": round(float(prob), 4),
+                "top_features": [f.to_dict() for f in expl.top_features],
             }
         )
 
