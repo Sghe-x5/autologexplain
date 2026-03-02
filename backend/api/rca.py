@@ -355,6 +355,27 @@ def dependency_graph(
     return {**graph.to_dict(), "hours": hours, "min_weight": min_weight}
 
 
+@router.get("/metrics")
+def detector_metrics():
+    """
+    Возвращает отчёт сравнения 4 детекторов аномалий на labeled synthetic dataset.
+
+    Файл `e2e-artifacts/metrics_report.json` генерируется оффлайн скриптом
+    `e2e-artifacts/evaluate_detectors.py`. Если файла нет — возвращает 404.
+    """
+    import os
+    path = "/app/e2e-artifacts/metrics_report.json"
+    if not os.path.exists(path):
+        raise HTTPException(
+            status_code=404,
+            detail="metrics_report_not_found: run e2e-artifacts/evaluate_detectors.py",
+        )
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as exc:
+        logger.exception("failed to read metrics_report.json")
+        raise HTTPException(status_code=500, detail="failed_to_read_metrics") from exc
 
 
 @router.get("/templates")
