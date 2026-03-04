@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { LogExplainBtn } from "@/widgets/LogExplainModal/components/LogExplainBtn";
 import { useLogExplainModal } from "@/widgets/LogExplainModal/model/useLogExplainModal";
 import LogExplainModal from "@/widgets/LogExplainModal";
+import { Dashboard } from "@/widgets/Dashboard";
 
 function App() {
   const modalRoot = document.getElementById("logExplainModal");
@@ -11,15 +12,7 @@ function App() {
 
   return (
     <main data-test-id="app-root">
-      <div className="w-full max-w-screen h-full max-h-screen overflow-hidden">
-        <img
-          src="/images/AppBG.webp"
-          loading="lazy"
-          decoding="async"
-          alt=""
-          data-test-id="app-background"
-        />
-      </div>
+      <Dashboard />
 
       {modalRoot !== null &&
         isShown &&

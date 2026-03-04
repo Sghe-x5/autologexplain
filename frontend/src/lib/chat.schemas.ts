@@ -18,6 +18,7 @@ export const Final = z.object({
 export const ErrorMsg = z.object({
   type: z.literal("error"),
   code: z.string(),
+  detail: z.string().optional(),
   message: z.string().optional(),
 });
 

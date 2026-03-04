@@ -50,7 +50,6 @@ export const chatMessagesApi = createApi({
       void
     >({
       async queryFn() {
-        console.log("Creating new chat...");
         const newChatResponse = await fetch(`${baseUrl}/chats/new`, {
           method: "POST",
           headers: {
@@ -60,18 +59,15 @@ export const chatMessagesApi = createApi({
 
         if (!newChatResponse.ok) {
           const errorText = await newChatResponse.text();
-          console.error(
-            "Failed to create chat:",
-            newChatResponse.status,
-            errorText
-          );
-          throw new Error(
-            `Failed to create chat: ${newChatResponse.status} ${errorText}`
-          );
+          return {
+            error: {
+              status: "CUSTOM_ERROR" as const,
+              error: `Failed to create chat: ${newChatResponse.status} ${errorText}`,
+            },
+          };
         }
 
         const { chat_id, token } = await newChatResponse.json();
-        console.log("Chat created successfully:", { chat_id, token });
 
         // Возвращаем параметры чата, WebSocket соединение будет установлено в ChatWithAI
         return {
