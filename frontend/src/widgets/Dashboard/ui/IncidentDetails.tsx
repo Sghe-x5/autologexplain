@@ -12,6 +12,7 @@
  *     col 3:
  *       - <ForecastPanel> (ML-прогноз + SHAP)
  *       - Timeline событий инцидента
+ *       - <LifecycleChecklist>
  *   Row 4 (2 колонки):
  */
 
@@ -35,6 +36,7 @@ import { formatDateTime, formatNumber } from "@/widgets/Dashboard/lib/format";
 import { cn } from "@/lib/utils";
 import { IncidentHeader } from "./incident/IncidentHeader";
 import { IncidentMetaStats } from "./incident/IncidentMetaStats";
+import { LifecycleChecklist } from "./incident/LifecycleChecklist";
 
 export const IncidentDetails = ({
   incidentId,
@@ -402,6 +404,7 @@ export const IncidentDetails = ({
             )}
           </div>
 
+          <LifecycleChecklist incident={incident} />
         </section>
       </div>
 
