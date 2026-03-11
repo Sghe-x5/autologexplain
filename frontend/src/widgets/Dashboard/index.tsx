@@ -3,6 +3,7 @@ import type { RootState } from "@/lib/store";
 import { Header } from "./ui/Header";
 import { OverviewPage } from "./ui/OverviewPage";
 import { IncidentsPage } from "./ui/IncidentsPage";
+import { GraphPage } from "./ui/GraphPage";
 
 export const Dashboard = () => {
   const view = useSelector((s: RootState) => s.dashboardView.view);
@@ -13,6 +14,7 @@ export const Dashboard = () => {
       <main>
         {view === "overview" && <OverviewPage />}
         {view === "incidents" && <IncidentsPage />}
+        {view === "graph" && <GraphPage />}
       </main>
     </div>
   );
