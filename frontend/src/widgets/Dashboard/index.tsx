@@ -4,6 +4,7 @@ import { Header } from "./ui/Header";
 import { OverviewPage } from "./ui/OverviewPage";
 import { IncidentsPage } from "./ui/IncidentsPage";
 import { GraphPage } from "./ui/GraphPage";
+import { MetricsPage } from "./ui/MetricsPage";
 
 export const Dashboard = () => {
   const view = useSelector((s: RootState) => s.dashboardView.view);
@@ -15,6 +16,7 @@ export const Dashboard = () => {
         {view === "overview" && <OverviewPage />}
         {view === "incidents" && <IncidentsPage />}
         {view === "graph" && <GraphPage />}
+        {view === "metrics" && <MetricsPage />}
       </main>
     </div>
   );
