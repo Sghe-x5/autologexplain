@@ -34,6 +34,7 @@ import {
 import { AlertLevelBadge } from "@/components/ui/badges";
 import { formatDateTime, formatNumber } from "@/widgets/Dashboard/lib/format";
 import { cn } from "@/lib/utils";
+import { ForecastPanel } from "./ForecastPanel";
 import { IncidentHeader } from "./incident/IncidentHeader";
 import { IncidentMetaStats } from "./incident/IncidentMetaStats";
 import { LifecycleChecklist } from "./incident/LifecycleChecklist";
@@ -372,6 +373,10 @@ export const IncidentDetails = ({
         </section>
 
         <section className="space-y-6">
+          <ForecastPanel
+            service={incident.service}
+            environment={incident.environment}
+          />
 
           <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-5 backdrop-blur">
             <div className="mb-4 flex items-center gap-2">
