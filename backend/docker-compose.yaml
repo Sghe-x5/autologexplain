@@ -43,6 +43,27 @@ services:
       - ..:/app
     restart: unless-stopped
 
+  beat:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    command: >
+      celery -A backend.celery_worker.celery_app beat
+      -l info
+    env_file:
+      - ./.env
+      - ../analytics/.env
+    environment:
+      - PYTHONPATH=/app:/app/backend
+    depends_on:
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ..:/app
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     ports:
