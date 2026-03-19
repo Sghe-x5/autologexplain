@@ -14,6 +14,8 @@
  *       - Timeline событий инцидента
  *       - <LifecycleChecklist>
  *   Row 4 (2 колонки):
+ *     - <SimilarIncidentsBlock>
+ *     - <PostmortemBlock>
  */
 
 import { useState } from "react";
@@ -35,6 +37,8 @@ import { AlertLevelBadge } from "@/components/ui/badges";
 import { formatDateTime, formatNumber } from "@/widgets/Dashboard/lib/format";
 import { cn } from "@/lib/utils";
 import { ForecastPanel } from "./ForecastPanel";
+import { SimilarIncidentsBlock } from "./SimilarIncidentsBlock";
+import { PostmortemBlock } from "./PostmortemBlock";
 import { IncidentHeader } from "./incident/IncidentHeader";
 import { IncidentMetaStats } from "./incident/IncidentMetaStats";
 import { LifecycleChecklist } from "./incident/LifecycleChecklist";
@@ -414,6 +418,8 @@ export const IncidentDetails = ({
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SimilarIncidentsBlock incidentId={incidentId} />
+        <PostmortemBlock incidentId={incidentId} />
       </div>
     </div>
   );
