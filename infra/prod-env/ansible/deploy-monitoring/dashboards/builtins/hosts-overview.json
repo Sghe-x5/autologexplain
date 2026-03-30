@@ -1,0 +1,20 @@
+{
+  "title": "Hosts Overview",
+  "uid": "hosts-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {
+    "list": [
+      {"name": "host", "type": "query", "datasource": "Prometheus", "query": "label_values(node_exporter_build_info, instance)", "includeAll": true, "refresh": 1}
+    ]
+  },
+  "panels": [
+    {"type": "stat", "title": "Up (node-exporter)", "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0}, "targets": [{"expr": "up{job=\"node-exporter\"}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "CPU %", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 3}, "targets": [{"expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "{{instance}}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "Memory Used %", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 11}, "fieldConfig": {"defaults": {"unit": "percent"}}, "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "legendFormat": "{{instance}}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "Disk Used % (/) ", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 11}, "fieldConfig": {"defaults": {"unit": "percent"}}, "targets": [{"expr": "(node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} - node_filesystem_free_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} * 100", "legendFormat": "{{instance}}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "Load Average (5m)", "gridPos": {"h": 6, "w": 24, "x": 0, "y": 19}, "targets": [{"expr": "node_load5", "legendFormat": "{{instance}}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "Network in/out", "gridPos": {"h": 6, "w": 24, "x": 0, "y": 25}, "targets": [{"expr": "sum by (instance) (irate(node_network_receive_bytes_total[5m]))", "legendFormat": "in {{instance}}"}, {"expr": "sum by (instance) (irate(node_network_transmit_bytes_total[5m]))", "legendFormat": "out {{instance}}"}]}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "title": "Containers Overview",
+  "uid": "containers-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {
+    "list": [
+      {"name": "host", "type": "query", "datasource": "Prometheus", "query": "label_values(container_cpu_usage_seconds_total, instance)", "includeAll": true, "refresh": 1},
+      {"name": "container", "type": "query", "datasource": "Prometheus", "query": "label_values(container_cpu_usage_seconds_total{instance=~\"$host\"}, name)", "includeAll": true, "refresh": 1}
+    ]
+  },
+  "panels": [
+    {"type": "timeseries", "title": "CPU cores", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}, "targets": [{"expr": "sum by (name, instance) (rate(container_cpu_usage_seconds_total{image!=\"\",name!~\"/(POD|k8s)\", instance=~\"$host\", name=~\"$container\"}[5m]))", "legendFormat": "{{instance}}/{{name}}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "Memory bytes", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"expr": "container_memory_working_set_bytes{name!~\"/(POD|k8s)\", instance=~\"$host\", name=~\"$container\"}", "legendFormat": "{{instance}}/{{name}}", "datasource": "Prometheus"}]},
+    {"type": "timeseries", "title": "FS bytes read/write", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}, "targets": [
+      {"expr": "sum by (name, instance) (irate(container_fs_reads_bytes_total{instance=~\"$host\", name=~\"$container\"}[5m]))", "legendFormat": "read {{instance}}/{{name}}"},
+      {"expr": "sum by (name, instance) (irate(container_fs_writes_bytes_total{instance=~\"$host\", name=~\"$container\"}[5m]))", "legendFormat": "write {{instance}}/{{name}}"}
+    ]}
+  ]
+}

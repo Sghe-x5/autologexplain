@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    static_configs:
+{% for h in groups['app'] | default([]) %}
+      - targets: ['{{ hostvars[h].ansible_host | default(h) }}:9100']
+        labels:
+          host: '{{ h }}'
+{% endfor %}
+
+  - job_name: 'cadvisor'
+    static_configs:
+{% for h in groups['app'] | default([]) %}
+      - targets: ['{{ hostvars[h].ansible_host | default(h) }}:1337']
+        labels:
+          host: '{{ h }}'
+{% endfor %}
+
+  - job_name: 'promtail'
+    metrics_path: /metrics
+    static_configs:
+{% for h in groups['app'] | default([]) %}
+      - targets: ['{{ hostvars[h].ansible_host | default(h) }}:1514']
+        labels:
+          host: '{{ h }}'
+{% endfor %}
+
+  - job_name: 'backend'
+    metrics_path: /api/metrics
+    scheme: http
+    static_configs:
+{% for h in groups['app'] | default([]) %}
+      - targets: ['{{ hostvars[h].ansible_host | default(h) }}:{{ hostvars[h].app_port | default(80) }}']
+        labels:
+          host: '{{ h }}'
+{% endfor %}
