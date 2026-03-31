@@ -35,6 +35,7 @@ from pydantic import BaseModel
 from backend.core.config import get_settings
 from backend.db.db import query as ch_query
 from backend.db.storage import _r
+from backend.services.incidents import get_incident, get_incidents
 from backend.services.anomaly_detector import (
     aggregate_by_window,
     anomaly_scores_by_service,
