@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from backend.api.chats import router as chats_router
+from backend.api.forecasting import router as forecasting_router
 from backend.api.incidents import router as incidents_router
 from backend.api.logs import router as logs_router
 from backend.api.rca import router as rca_router
@@ -39,4 +40,5 @@ app.include_router(chats_router, prefix="/chats", tags=["chats"])
 app.include_router(logs_router, prefix="/logs", tags=["logs"])
 app.include_router(incidents_router, prefix="/incidents", tags=["incidents"])
 app.include_router(rca_router)
+app.include_router(forecasting_router)
 app.include_router(ws_router, tags=["ws"])

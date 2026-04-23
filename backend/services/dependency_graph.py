@@ -64,6 +64,12 @@ class ServiceGraph:
     # ── Mutation ─────────────────────────────────────────────────────────────
 
     def add_edge(self, caller: str, callee: str, weight: int = 1) -> None:
+        """
+        Увеличить вес ребра ``caller → callee`` на ``weight``.
+
+        Self-loops (caller == callee) игнорируются: в graph они не
+        несут смысла для cascade-анализа.
+        """
         if caller != callee:
             self.edges[caller][callee] += weight
 
@@ -78,6 +84,7 @@ class ServiceGraph:
         return list(self.edges.get(service, {}).keys())
 
     def all_nodes(self) -> set[str]:
+        """Все узлы графа (источники + таргеты рёбер)."""
         nodes = set(self.edges.keys())
         for callees in self.edges.values():
             nodes.update(callees.keys())
@@ -172,18 +179,25 @@ def find_cascade_root(
 
     anomalous_set = set(anomalous_services)
 
-    # Step 1: services with no anomalous upstream callers
-    candidates = [
-        svc for svc in anomalous_services
-        if not any(c in anomalous_set for c in graph.get_callers(svc))
-    ]
-    if not candidates:
-        candidates = anomalous_services[:]  # circular dependency: take all
-
-    # Step 2: prefer candidates with anomalous downstream services (cascade proof)
     def _onset(svc: str) -> str:
         return first_anomaly_times.get(svc, "9999-99-99")
 
+    # Step 1: services with no *earlier-started* anomalous upstream callers.
+    # A service whose only anomalous callers started AFTER it cannot have been
+    # triggered by them — so it is still a valid cascade origin. This handles
+    # cyclic dependency graphs (A↔B↔C) where naive "no anomalous callers"
+    # filters out the real root.
+    candidates = [
+        svc for svc in anomalous_services
+        if not any(
+            c in anomalous_set and _onset(c) < _onset(svc)
+            for c in graph.get_callers(svc)
+        )
+    ]
+    if not candidates:
+        candidates = anomalous_services[:]  # fully-connected cycle fallback
+
+    # Step 2: prefer candidates with anomalous downstream services (cascade proof)
     confirmed = [
         c for c in candidates
         if any(callee in anomalous_set for callee in graph.get_callees(c))

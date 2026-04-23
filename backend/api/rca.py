@@ -61,24 +61,34 @@ def _load_incident(fp: str) -> Optional[dict]:
     # Try new ClickHouse-backed incident store first (by fingerprint)
     try:
         sql = """
-            SELECT incident_id, max(version) AS max_version,
-                argMax(fingerprint, version) AS inc_fingerprint,
-                argMax(title, version) AS title,
-                argMax(status, version) AS status,
-                argMax(service, version) AS service,
-                argMax(environment, version) AS environment,
-                argMax(severity, version) AS severity
-            FROM incidents
+            SELECT incident_id, max_version, fingerprint, title, status, service,
+                   environment, category, severity, affected_count, opened_at,
+                   last_seen_at, online_root_cause_service
+            FROM (
+                SELECT incident_id, max(version) AS max_version,
+                    argMax(fingerprint, version) AS fingerprint,
+                    argMax(title, version) AS title,
+                    argMax(status, version) AS status,
+                    argMax(service, version) AS service,
+                    argMax(environment, version) AS environment,
+                    argMax(category, version) AS category,
+                    argMax(severity, version) AS severity,
+                    argMax(affected_services, version) AS affected_count,
+                    argMax(opened_at, version) AS opened_at,
+                    argMax(last_seen_at, version) AS last_seen_at,
+                    argMax(root_cause_service, version) AS online_root_cause_service
+                FROM incidents
+                GROUP BY incident_id
+            )
             WHERE fingerprint = %(fp)s
-            GROUP BY incident_id
             ORDER BY max_version DESC
             LIMIT 1
         """
-        rows = ch_query(sql, {"fp": fp})
+        rows = ch_query(sql, {"fp": fp}, json_columns=[])
         if rows:
             return rows[0]
     except Exception:
-        pass
+        logger.exception("rca _load_incident: ClickHouse lookup failed, falling back to Redis")
     # Fallback: legacy Redis hash (incident V0)
     r   = _r()
     raw = r.hgetall(f"incident:{fp}")
@@ -171,8 +181,9 @@ def _load_all_reports() -> list[dict]:
 # ─── Endpoints ───────────────────────────────────────────────────────────────────
 
 class AnalyzeRequest(BaseModel):
-    hours:   int  = 6    # Look-back window for log fetching
-    use_llm: bool = False
+    hours:     int  = 6      # Look-back window for log fetching
+    use_llm:   bool = False
+    log_limit: int  = 20000  # Upper cap on logs pulled from ClickHouse
 
 
 @router.post("/analyze/{fingerprint}")
@@ -196,13 +207,14 @@ def analyze_incident(fingerprint: str, body: AnalyzeRequest):
         raise HTTPException(status_code=404, detail="incident_not_found")
 
     # ── Fetch main log batch ──────────────────────────────────────────────────
+    log_limit = max(500, min(int(body.log_limit or 20000), 50_000))
     sql_logs = f"""
         SELECT timestamp, product, service, environment,
                level, status_code, trace_id, message, metadata
         FROM {s.CLICKHOUSE_TABLE}
         WHERE timestamp >= now() - INTERVAL {body.hours} HOUR
         ORDER BY timestamp DESC
-        LIMIT 2000
+        LIMIT {log_limit}
     """
     try:
         rows = ch_query(sql_logs, {})
@@ -216,6 +228,17 @@ def analyze_incident(fingerprint: str, body: AnalyzeRequest):
     windows   = aggregate_by_window(enriched)
     anomalies = detect_anomalies(windows)
     z_scores  = anomaly_scores_by_service(anomalies)
+
+    # ── Enrich incident with affected_services derived from anomalies ─────────
+    # `incidents` table stores only a count; on-demand analyser must reconstruct
+    # the actual service list. Union of: incident's own service, services with
+    # anomalies in the window, services co-occurring in the same traces as the
+    # incident's service (for cascade reconstruction).
+    incident_service = str(incident.get("service") or "")
+    affected_from_anomalies = {ev.service for ev in anomalies if ev.service}
+    if incident_service:
+        affected_from_anomalies.add(incident_service)
+    incident["affected_services"] = sorted(affected_from_anomalies)
 
     # ── Service dependency graph from trace data ──────────────────────────────
     sql_traces = f"""
@@ -331,6 +354,29 @@ def dependency_graph(
 
     graph = build_graph_from_traces(rows).filtered(min_weight)
     return {**graph.to_dict(), "hours": hours, "min_weight": min_weight}
+
+
+@router.get("/metrics")
+def detector_metrics():
+    """
+    Возвращает отчёт сравнения 4 детекторов аномалий на labeled synthetic dataset.
+
+    Файл `e2e-artifacts/metrics_report.json` генерируется оффлайн скриптом
+    `e2e-artifacts/evaluate_detectors.py`. Если файла нет — возвращает 404.
+    """
+    import os
+    path = "/app/e2e-artifacts/metrics_report.json"
+    if not os.path.exists(path):
+        raise HTTPException(
+            status_code=404,
+            detail="metrics_report_not_found: run e2e-artifacts/evaluate_detectors.py",
+        )
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as exc:
+        logger.exception("failed to read metrics_report.json")
+        raise HTTPException(status_code=500, detail="failed_to_read_metrics") from exc
 
 
 @router.get("/templates")

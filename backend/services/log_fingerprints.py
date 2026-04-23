@@ -55,6 +55,23 @@ def normalize_message(message: str | None) -> str:
 
 
 def make_fingerprint(message_template: str, service: str, category: str) -> str:
+    """
+    Детерминированный fingerprint для группировки лог-записей.
+
+    Считается как SHA-1 от конкатенации ``service|category|message_template``.
+    Один и тот же шаблон в одном сервисе даёт один и тот же fingerprint;
+    разные сервисы с идентичным шаблоном получают РАЗНЫЕ fingerprint'ы
+    (важно, чтобы инциденты разных сервисов не сливались).
+
+    Args:
+        message_template: нормализованный template (UUID/числа заменены
+            на placeholders), см. :func:`normalize_message_template`.
+        service: имя сервиса.
+        category: категория лога (database, network, ...).
+
+    Returns:
+        40-символьная hex-строка SHA-1 digest.
+    """
     payload = "|".join(
         (
             _safe_text(service, "unknown"),
@@ -87,6 +104,27 @@ def make_fingerprint_observation(
     observed_at: Any,
     occurrence_count: int = 1,
 ) -> dict[str, Any]:
+    """
+    Построить одну запись наблюдения fingerprint'а для ``fingerprint_catalog``.
+
+    Возвращаемый dict потом агрегируется в
+    :func:`signals.repository.register_fingerprint_observations` — там
+    ``first_seen = min`` по observed_at, ``last_seen = max``, counts
+    суммируются.
+
+    Args:
+        fingerprint: SHA-1 из :func:`make_fingerprint`.
+        service, category: классификация.
+        message_template: нормализованный template.
+        example_message: один конкретный пример (для UI — показать пользователю
+            как это выглядит в логе).
+        observed_at: время наблюдения (datetime или ISO-строка).
+        occurrence_count: сколько раз шаблон встретился в батче (по умолчанию 1).
+
+    Returns:
+        dict с полями ``{fingerprint, service, category, message_template,
+        example_message, observed_at (UTC datetime), occurrence_count (≥1)}``.
+    """
     return {
         "fingerprint": fingerprint,
         "service": _safe_text(service, "unknown"),

@@ -9,6 +9,7 @@ from backend.services.incidents import (
     IncidentNotFoundError,
     InvalidStatusTransitionError,
     create_manual_incident,
+    delete_incident as delete_incident_service,
     get_evidence,
     get_incident,
     get_incidents,
@@ -16,6 +17,8 @@ from backend.services.incidents import (
     update_incident_status,
 )
 from backend.services.incidents.constants import INCIDENT_STATUSES
+from backend.services.similar_incidents import top_k_similar
+from backend.services.postmortem import PostmortemInput, generate_postmortem
 
 router = APIRouter()
 
@@ -133,19 +136,79 @@ def incident_evidence(incident_id: str, limit: int = Query(200, ge=1, le=500)):
         raise HTTPException(status_code=500, detail="failed_to_fetch_evidence") from exc
 
 
-@router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_incident(incident_id: str):
-    card = get_incident(incident_id)
-    if card is None:
+@router.get("/{incident_id}/similar")
+def incident_similar(incident_id: str, k: int = Query(5, ge=1, le=20)):
+    """Top-k похожих инцидентов по гибридному скорингу (без embeddings)."""
+    src = get_incident(incident_id)
+    if src is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found")
+    try:
+        candidates = get_incidents(
+            limit=500, offset=0,
+            status=None, service=None, environment=None,
+            category=None, severity=None, q=None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="failed_to_fetch_incidents") from exc
+    items = candidates.get("items", []) if isinstance(candidates, dict) else candidates
+    matches = top_k_similar(src, items, k=k)
+    return {
+        "incident_id": incident_id,
+        "matches": [m.to_dict() for m in matches],
+    }
+
+
+@router.get("/{incident_id}/postmortem")
+def incident_postmortem(incident_id: str):
+    """Автоматически сгенерированный markdown-постмортем."""
+    src = get_incident(incident_id)
+    if src is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found")
 
-    if card.get("status") != "resolved":
-        try:
-            update_incident_status(
-                incident_id=incident_id,
-                next_status="resolved",
-                actor="incident-api",
-                note="deleted_via_api",
-            )
-        except InvalidStatusTransitionError as exc:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    try:
+        timeline = get_timeline(incident_id, limit=200)
+    except Exception:
+        timeline = []
+
+    evidence_payload: list[dict] = []
+    try:
+        ev = get_evidence(incident_id, limit=20)
+        if isinstance(ev, dict):
+            evidence_payload = list(ev.get("candidate_evidence") or [])
+    except Exception:
+        evidence_payload = []
+
+    # similar
+    similar_dicts: list[dict] = []
+    try:
+        all_incs = get_incidents(
+            limit=500, offset=0,
+            status=None, service=None, environment=None,
+            category=None, severity=None, q=None,
+        )
+        items = all_incs.get("items", []) if isinstance(all_incs, dict) else all_incs
+        similar_dicts = [m.to_dict() for m in top_k_similar(src, items, k=5)]
+    except Exception:
+        similar_dicts = []
+
+    md = generate_postmortem(
+        PostmortemInput(
+            incident=src,
+            timeline_events=timeline,
+            evidence_candidates=evidence_payload,
+            similar_incidents=similar_dicts,
+            evidence_templates=[],
+            author="autologexplain",
+        )
+    )
+    return {"incident_id": incident_id, "markdown": md}
+
+
+@router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_incident_endpoint(incident_id: str):
+    try:
+        delete_incident_service(incident_id)
+    except IncidentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident_not_found") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="failed_to_delete_incident") from exc

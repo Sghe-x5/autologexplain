@@ -1,8 +1,24 @@
 """
-Incident detection and multi-factor root-cause scoring.
+Reference implementation of incident detection and multi-factor RCA scoring.
 
-Pipeline
-────────
+⚠️  NOT USED IN PRODUCTION PIPELINE.
+    Production-версия: ``backend/services/incidents/engine.py`` (Celery workers,
+    ClickHouse persistence, Redis distributed locks, versioned snapshots).
+
+Назначение
+──────────
+In-memory алгоритм scoring инцидентов — нужен как:
+
+  1. **Reference implementation** для юнит-тестов самой формулы без зависимости
+     от ClickHouse/Redis.
+  2. **Документированный алгоритм** для защиты курсовой — читабельный, без
+     persistence-слоя, показывает «чистую математику» scoring.
+
+Production-pipeline использует ту же формулу, но с persistent хранением
+в ClickHouse и распределённым lock'ом.
+
+Pipeline (in-memory)
+────────────────────
 1.  Filter enriched logs to warning / error / critical only.
 2.  Normalize each message (strip UUIDs, IPs, numbers, quoted literals).
 3.  Compute a SHA-256 fingerprint per (service, category, normalized_message).

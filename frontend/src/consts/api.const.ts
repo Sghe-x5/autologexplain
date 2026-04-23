@@ -1,8 +1,11 @@
-const ip = "84.201.181.1";
+// Prod defaults; override in frontend/.env.local via VITE_API_BASE / VITE_WS_BASE.
+const PROD_API_BASE = "http://84.201.181.1/api";
+const PROD_WS_BASE = "ws://84.201.181.1/api";
 
-const api = ip;
-export const FILTER_URL = `http://${api}/api/logs/tree`; //http://46.21.246.90:8080/logs/tree
+export const baseUrl =
+  (import.meta.env.VITE_API_BASE as string | undefined) ?? PROD_API_BASE;
 
-export const baseUrl = `http://${api}/api`;
+export const WS_BASE =
+  (import.meta.env.VITE_WS_BASE as string | undefined) ?? PROD_WS_BASE;
 
-export const WS_BASE = `ws://${api}/api`;
+export const FILTER_URL = `${baseUrl}/logs/tree`;

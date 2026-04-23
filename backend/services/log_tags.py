@@ -173,10 +173,35 @@ def detect_category(row: Mapping[str, Any]) -> tuple[str, str]:
 
 
 def normalize_severity(level: str | None, status_code: int | None = None) -> str:
+    """
+    Нормализовать severity к одному из: debug / info / warning / error / critical.
+
+    Приоритет:
+      1. Явный ``level`` (fatal→critical, warn→warning, и т.д.), если распознан.
+      2. HTTP status_code:
+          - ≥500 → critical (override любого level, т.к. серверная ошибка).
+          - ≥400 и level не ``error``/``critical`` → error (апгрейд info/warning).
+      3. Fallback: "info".
+
+    Args:
+        level: raw level-строка из лога ("ERROR", "warn", "CRITICAL", ...).
+        status_code: HTTP-статус (для апгрейда severity по 4xx/5xx).
+
+    Returns:
+        Одно из значений из :data:`ALLOWED_SEVERITIES`.
+
+    Examples:
+        >>> normalize_severity("WARN")
+        'warning'
+        >>> normalize_severity(None, status_code=503)
+        'critical'
+        >>> normalize_severity("info", status_code=404)
+        'error'
+    """
     normalized = None
     if level:
         normalized = _LEVEL_MAP.get(_safe_lower(level))
- 
+
     if status_code is not None:
         if status_code >= 500:
             return "critical"
