@@ -24,6 +24,7 @@ from backend.services.incidents.redis_cache import (
     invalidate_incident_cache,
 )
 from backend.services.incidents.repository import (
+    delete_incident_records,
     fetch_active_incidents,
     fetch_dependency_graph,
     fetch_incident_card,
@@ -989,6 +990,17 @@ def update_incident_status(
     if card is None:
         raise IncidentNotFoundError(incident_id)
     return card
+
+
+def delete_incident(incident_id: str) -> None:
+    ensure_ready()
+
+    current = fetch_incident_card(incident_id)
+    if current is None:
+        raise IncidentNotFoundError(incident_id)
+
+    delete_incident_records(incident_id)
+    invalidate_incident_cache(incident_id)
 
 
 def get_timeline(incident_id: str, limit: int) -> list[dict[str, Any]]:

@@ -46,6 +46,17 @@ def _insert_rows(table: str, columns: list[str], rows: list[dict[str, Any]]) -> 
             pass
 
 
+def _execute_command(sql: str, *, settings: Mapping[str, Any] | None = None) -> None:
+    c = client()
+    try:
+        c.command(sql, settings=dict(settings or {}))
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+
 def fetch_recent_logs(window_minutes: int, limit: int) -> list[dict[str, Any]]:
     settings = get_settings()
     safe_limit = _safe_limit(limit, hard_cap=200_000)
@@ -434,6 +445,17 @@ def insert_incident_events(rows: list[dict[str, Any]]) -> None:
         "created_at",
     ]
     _insert_rows("incident_events", columns, rows)
+
+
+def delete_incident_records(incident_id: str) -> None:
+    safe_incident_id = _quote_sql(incident_id)
+    mutation_settings = {"mutations_sync": 1}
+    for sql in (
+        f"ALTER TABLE incidents DELETE WHERE incident_id = {safe_incident_id}",
+        f"ALTER TABLE incident_events DELETE WHERE incident_id = {safe_incident_id}",
+        f"ALTER TABLE incident_candidates DELETE WHERE incident_id = {safe_incident_id}",
+    ):
+        _execute_command(sql, settings=mutation_settings)
 
 
 def fetch_incident_events(incident_id: str, limit: int) -> list[dict[str, Any]]:

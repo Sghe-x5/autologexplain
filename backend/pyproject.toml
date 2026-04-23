@@ -29,6 +29,10 @@ langchain-community = "^0.3.0"
 langchain-openai = "^0.2.0"
 langchain-experimental = "^0.3.0"
 pandas = "^2.2.0"
+numpy = "*"
+scikit-learn = "*"
+xgboost = "*"
+shap = "*"
 lark = "^1.1.9"
 grpcio = "^1.62"
 yandexcloud = "^0.250.0"
@@ -85,6 +89,11 @@ module = [
   "langchain.*",
   "clickhouse_connect",
   "pandas",
+  "numpy",
+  "sklearn",
+  "sklearn.*",
+  "xgboost",
+  "shap",
   "dotenv",
 ]
 ignore_missing_imports = true

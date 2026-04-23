@@ -1,13 +1,21 @@
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 from analytics.utils.token_manager import YandexCloudTokenManager
 
-load_dotenv()
+_ANALYTICS_ENV = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(_ANALYTICS_ENV)
 
 YC_FOLDER_ID = os.getenv("YC_FOLDER_ID")
-YC_API_KEY = os.getenv("YC_API_KEY")  
-token_manager = YandexCloudTokenManager()
+YC_API_KEY = os.getenv("YC_API_KEY")
+AI_STUDIO_BASE_URL = os.getenv("AI_STUDIO_BASE_URL", "https://ai.api.cloud.yandex.net/v1")
+
+try:
+    token_manager: YandexCloudTokenManager | None = YandexCloudTokenManager()
+except ValueError:
+    token_manager = None
 
 if not YC_FOLDER_ID:
     raise ValueError("Не найден YC_FOLDER_ID в файле .env")

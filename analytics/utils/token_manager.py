@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import jwt
 import yandexcloud
@@ -11,6 +12,8 @@ from yandex.cloud.iam.v1.iam_token_service_pb2_grpc import IamTokenServiceStub
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+_ANALYTICS_ENV = Path(__file__).resolve().parents[1] / ".env"
 
 
 class YandexCloudTokenManager:
@@ -30,7 +33,7 @@ class YandexCloudTokenManager:
         :return: Словарь с данными сервисного аккаунта
         :raises: ValueError если переменные не заданы
         """
-        load_dotenv()
+        load_dotenv(_ANALYTICS_ENV)
         config = {
             "id": os.getenv("YC_KEY_ID"),
             "service_account_id": os.getenv("YC_SERVICE_ACCOUNT_ID"),

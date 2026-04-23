@@ -19,6 +19,24 @@ function handleChatMessage(
         text: msg.content,
         pending: false,
       });
+      return;
+    }
+
+    if (msg.type === "error") {
+      const detail =
+        "detail" in msg && msg.detail
+          ? `\n\n${msg.detail}`
+          : "message" in msg && msg.message
+            ? `\n\n${msg.message}`
+            : "";
+
+      draft.items.push({
+        role: "assistant",
+        id: crypto.randomUUID(),
+        requestId: crypto.randomUUID(),
+        text: `Ошибка AI-анализа: ${msg.code}${detail}`,
+        pending: false,
+      });
     }
   });
 }

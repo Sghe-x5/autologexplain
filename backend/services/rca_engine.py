@@ -35,8 +35,8 @@ Pipeline
 
 5. Generate summary
    ─────────────────────────────────────────────────────────────────────────
-   Rule-based summary is always produced.  If an LLM is available it is
-   called to enrich the summary with natural-language recommendations.
+   Summary is produced either deterministically or через живую LLM-модель,
+   в зависимости от режима вызова.
 """
 
 from __future__ import annotations
@@ -98,7 +98,7 @@ def _rule_based_summary(report: RcaReport) -> str:
     Generate a deterministic, human-readable incident summary without an LLM.
 
     Covers: root service, cascade path, anomaly score, SLO impact, and
-    confidence.  Used as a fallback when the LLM is unavailable.
+    confidence.
     """
     if len(report.cascade_path) > 1:
         path_str = " → ".join(report.cascade_path)
@@ -132,45 +132,41 @@ def _rule_based_summary(report: RcaReport) -> str:
 
 # ─── LLM-enhanced summary (optional) ────────────────────────────────────────────
 
-def _llm_summary(report: RcaReport, chat_id: str = "rca-engine") -> Optional[str]:
+def _llm_summary(report: RcaReport, chat_id: str = "rca-engine") -> str:
     """
     Request an LLM-generated incident summary.
 
     Builds a structured prompt from the report fields and calls the existing
-    ``ask_llm`` service.  Returns ``None`` on any failure so the caller can
-    fall back to the rule-based summary.
+    ``ask_llm`` service.
     """
-    try:
-        from backend.services.llm_service import ask_llm
+    from backend.services.llm_service import ask_llm
 
-        prompt = (
-            "You are an SRE analyzing a production incident.\n\n"
-            f"Root cause service:  {report.root_cause_service} ({report.root_cause_category})\n"
-            f"Cascade path:        {' → '.join(report.cascade_path)}\n"
-            f"Affected services:   {', '.join(report.affected_services)}\n"
-            f"Anomaly z-score:     {report.anomaly_score:.1f}\n"
-            f"SLO alert level:     {report.alert_level}\n"
-            f"Analysis confidence: {report.confidence:.0%}\n"
-        )
-        if report.evidence_templates:
-            prompt += f"Top error template:  {report.evidence_templates[0]}\n"
-        if report.timeline:
-            first = report.timeline[0]
-            prompt += (
-                f"First anomaly:       {first.get('time')} "
-                f"in {first.get('service')} ({first.get('count')} events)\n"
-            )
-
+    prompt = (
+        "You are an SRE analyzing a production incident.\n\n"
+        f"Root cause service:  {report.root_cause_service} ({report.root_cause_category})\n"
+        f"Cascade path:        {' → '.join(report.cascade_path)}\n"
+        f"Affected services:   {', '.join(report.affected_services)}\n"
+        f"Anomaly z-score:     {report.anomaly_score:.1f}\n"
+        f"SLO alert level:     {report.alert_level}\n"
+        f"Analysis confidence: {report.confidence:.0%}\n"
+    )
+    if report.evidence_templates:
+        prompt += f"Top error template:  {report.evidence_templates[0]}\n"
+    if report.timeline:
+        first = report.timeline[0]
         prompt += (
-            "\nProvide:\n"
-            "1. Root cause hypothesis (1-2 sentences)\n"
-            "2. Immediate mitigation steps (bullet list)\n"
-            "3. Confidence in your analysis (0-100%)\n"
+            f"First anomaly:       {first.get('time')} "
+            f"in {first.get('service')} ({first.get('count')} events)\n"
         )
 
-        return ask_llm(prompt, chat_id=chat_id)
-    except Exception:
-        return None
+    prompt += (
+        "\nProvide:\n"
+        "1. Root cause hypothesis (1-2 sentences)\n"
+        "2. Immediate mitigation steps (bullet list)\n"
+        "3. Confidence in your analysis (0-100%)\n"
+    )
+
+    return ask_llm(prompt, chat_id=chat_id)
 
 
 # ─── Main entry point ────────────────────────────────────────────────────────────
@@ -204,7 +200,6 @@ def build_rca_report(
         Output of :func:`~log_clustering.extract_templates`.
     use_llm:
         When ``True``, attempt to enrich the summary with an LLM call.
-        Falls back to the rule-based summary on any error.
     """
     from backend.services.dependency_graph import (
         find_cascade_root,
@@ -300,8 +295,7 @@ def build_rca_report(
 
     # ── Stage 7: summary ──────────────────────────────────────────────────────
     if use_llm:
-        llm_text = _llm_summary(report)
-        report.summary = llm_text or _rule_based_summary(report)
+        report.summary = _llm_summary(report)
     else:
         report.summary = _rule_based_summary(report)
 

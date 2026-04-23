@@ -13,9 +13,8 @@ class SafeSQLExecutorArgs(BaseModel):
 @tool("safe-sql-query-executor", args_schema=SafeSQLExecutorArgs)
 def safe_sql_query_executor(query: str) -> str:
     """
-    Выполняет БЕЗОПАСНЫЙ SQL-запрос (только SELECT с LIMIT) в ClickHouse.
-    Это твой главный и единственный инструмент для получения данных.
-    Ты должен сам написать корректный и эффективный SQL-запрос.
+    Выполняет безопасный SELECT-запрос к ClickHouse.
+    Используй этот инструмент для выборки логов и агрегатов, но только с LIMIT.
     """
 
     processed_query = query.strip()

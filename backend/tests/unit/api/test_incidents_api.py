@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from backend.services.incidents import InvalidStatusTransitionError
+from backend.services.incidents import IncidentNotFoundError, InvalidStatusTransitionError
 
 
 def _patch_app(monkeypatch):
@@ -81,11 +81,28 @@ def test_timeline_returns_not_found_when_empty(monkeypatch):
     assert resp.status_code == 404
 
 
-def test_delete_incident_resolves_when_needed(monkeypatch):
-    monkeypatch.setattr("backend.api.incidents.get_incident", lambda incident_id: {"status": "open"})
-    monkeypatch.setattr("backend.api.incidents.update_incident_status", lambda **_: {"status": "resolved"})
+def test_delete_incident_calls_delete_service(monkeypatch):
+    calls: list[str] = []
+
+    def _delete(incident_id: str):
+        calls.append(incident_id)
+
+    monkeypatch.setattr("backend.api.incidents.delete_incident_service", _delete)
     app = _patch_app(monkeypatch)
     client = TestClient(app)
 
     resp = client.delete("/incidents/inc-1")
     assert resp.status_code == 204
+    assert calls == ["inc-1"]
+
+
+def test_delete_incident_returns_not_found(monkeypatch):
+    monkeypatch.setattr(
+        "backend.api.incidents.delete_incident_service",
+        lambda incident_id: (_ for _ in ()).throw(IncidentNotFoundError("missing")),
+    )
+    app = _patch_app(monkeypatch)
+    client = TestClient(app)
+
+    resp = client.delete("/incidents/inc-404")
+    assert resp.status_code == 404
