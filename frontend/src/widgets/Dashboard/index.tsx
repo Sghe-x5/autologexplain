@@ -10,7 +10,7 @@ export const Dashboard = () => {
   const view = useSelector((s: RootState) => s.dashboardView.view);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-zinc-950 text-zinc-200">
       <Header />
       <main>
         {view === "overview" && <OverviewPage />}

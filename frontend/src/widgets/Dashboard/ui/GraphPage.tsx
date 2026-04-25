@@ -17,80 +17,85 @@ export const GraphPage = () => {
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="flex items-center gap-3 text-2xl font-bold text-zinc-50">
+          <span className="inline-block h-5 w-1 rounded-sm bg-violet-500" />
           Граф зависимостей сервисов
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-zinc-500">
           Построен автоматически из trace_id в логах. Толщина ребра ∝ числу
           совместных трейсов.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="lg:col-span-2 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-5 backdrop-blur">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Network className="h-4 w-4 text-slate-600" />
-              <h2 className="text-sm font-semibold text-slate-900">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10 ring-1 ring-violet-500/30">
+                <Network className="h-3.5 w-3.5 text-violet-400" />
+              </div>
+              <h2 className="text-sm font-semibold text-zinc-100">
                 Топология
               </h2>
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="font-mono text-xs text-zinc-500">
               {nodes.length} узлов · {edges.length} рёбер
             </div>
           </div>
 
           {graph.isLoading ? (
-            <div className="py-16 text-center text-sm text-slate-400">
+            <div className="py-16 text-center text-sm text-zinc-600">
               загрузка…
             </div>
           ) : nodes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center text-sm text-slate-400">
+            <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/40 py-16 text-center text-sm text-zinc-600">
               Нет trace_id в логах — граф пустой
             </div>
           ) : (
             <GraphSvg layout={layout} edges={edges} />
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-1 w-4 rounded-full bg-blue-400" />
+          <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-[11px] text-zinc-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-1 w-4 rounded-full bg-violet-500/40" />
               тонкое (weight 1-30)
             </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-[3px] w-4 rounded-full bg-blue-500" />
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-[3px] w-4 rounded-full bg-violet-500/70" />
               среднее (30-100)
             </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-[5px] w-4 rounded-full bg-blue-700" />
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-[5px] w-4 rounded-full bg-violet-400" />
               толстое (100+)
             </span>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-5 backdrop-blur">
           <div className="mb-4 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-slate-600" />
-            <h2 className="text-sm font-semibold text-slate-900">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10 ring-1 ring-violet-500/30">
+              <FileText className="h-3.5 w-3.5 text-violet-400" />
+            </div>
+            <h2 className="text-sm font-semibold text-zinc-100">
               Топ-10 шаблонов
             </h2>
           </div>
           {templates.isLoading ? (
-            <div className="py-10 text-center text-sm text-slate-400">
+            <div className="py-10 text-center text-sm text-zinc-600">
               загрузка…
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {(templates.data?.templates ?? []).map((t, i) => (
                 <div
                   key={i}
-                  className="rounded-lg border border-slate-100 bg-slate-50 p-2"
+                  className="rounded-lg border border-zinc-800/60 bg-zinc-950/60 p-2"
                 >
-                  <div className="mb-1 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>#{i + 1}</span>
-                    <span className="font-mono">{t.count}</span>
+                  <div className="mb-1 flex items-center justify-between font-mono text-[10px] text-zinc-500">
+                    <span className="text-violet-400">#{i + 1}</span>
+                    <span className="tabular-nums">{t.count}</span>
                   </div>
-                  <code className="block break-words font-mono text-[11px] text-slate-800">
+                  <code className="block break-words font-mono text-[11px] text-zinc-200">
                     {t.template}
                   </code>
                 </div>
@@ -100,30 +105,34 @@ export const GraphPage = () => {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">
+      <div className="mt-6 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-5 backdrop-blur">
+        <h2 className="mb-3 text-sm font-semibold text-zinc-100">
           Рёбра (отсортированы по весу)
         </h2>
         {edges.length === 0 ? (
-          <div className="py-4 text-sm text-slate-400">нет данных</div>
+          <div className="py-4 text-sm text-zinc-600">нет данных</div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-slate-100">
+          <div className="overflow-hidden rounded-lg border border-zinc-800/60">
             <table className="w-full">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+              <thead className="bg-zinc-950/60 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                 <tr>
                   <th className="px-3 py-2 text-left">Откуда</th>
                   <th className="px-3 py-2 text-left">Куда</th>
                   <th className="px-3 py-2 text-right">Вес (трейсов)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-zinc-800/60 text-sm">
                 {[...edges]
                   .sort((a, b) => b.weight - a.weight)
                   .map((e, i) => (
-                    <tr key={i}>
-                      <td className="px-3 py-1.5 text-slate-700">{e.from}</td>
-                      <td className="px-3 py-1.5 text-slate-700">→ {e.to}</td>
-                      <td className="px-3 py-1.5 text-right font-mono text-slate-900">
+                    <tr key={i} className="transition hover:bg-zinc-900/40">
+                      <td className="px-3 py-1.5 font-mono text-zinc-300">
+                        {e.from}
+                      </td>
+                      <td className="px-3 py-1.5 font-mono text-zinc-300">
+                        <span className="text-zinc-600">→</span> {e.to}
+                      </td>
+                      <td className="px-3 py-1.5 text-right font-mono font-semibold tabular-nums text-violet-400">
                         {e.weight}
                       </td>
                     </tr>
@@ -181,7 +190,7 @@ function GraphSvg({
           markerHeight="6"
           orient="auto"
         >
-          <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8" />
+          <path d="M0,0 L10,5 L0,10 z" fill="#a855f7" />
         </marker>
       </defs>
       {edges.map((e, i) => {
@@ -191,8 +200,8 @@ function GraphSvg({
         const thickness =
           e.weight >= 100 ? 5 : e.weight >= 30 ? 3 : 1;
         const color =
-          e.weight >= 100 ? "#1d4ed8" : e.weight >= 30 ? "#3b82f6" : "#93c5fd";
-        const opacity = 0.3 + 0.6 * (e.weight / maxW);
+          e.weight >= 100 ? "#a855f7" : e.weight >= 30 ? "#8b5cf6" : "#6366f1";
+        const opacity = 0.4 + 0.6 * (e.weight / maxW);
         return (
           <line
             key={i}
@@ -211,19 +220,26 @@ function GraphSvg({
         <g key={i} transform={`translate(${n.x}, ${n.y})`}>
           <circle
             r={34}
-            fill="white"
-            stroke="#1e293b"
+            fill="#18181b"
+            stroke="#a855f7"
             strokeWidth={1.5}
-            className="drop-shadow"
+            opacity={0.95}
+          />
+          <circle
+            r={34}
+            fill="none"
+            stroke="#a855f7"
+            strokeWidth={0.5}
+            opacity={0.3}
           />
           <text
             textAnchor="middle"
             dy="0.35em"
             className={cn(
-              "font-semibold",
+              "font-mono font-semibold",
               n.name.length > 9 ? "text-[9px]" : "text-[11px]"
             )}
-            fill="#0f172a"
+            fill="#e4e4e7"
           >
             {n.name}
           </text>

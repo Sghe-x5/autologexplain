@@ -169,6 +169,127 @@ def _llm_summary(report: RcaReport, chat_id: str = "rca-engine") -> str:
     return ask_llm(prompt, chat_id=chat_id)
 
 
+# ─── Evidence template selection ────────────────────────────────────────────────
+
+def _parse_ts(value) -> Optional[datetime]:
+    """Best-effort parse of a timestamp coming either as datetime or ISO string."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    try:
+        s = str(value).replace("Z", "+00:00")
+        if " " in s and "T" not in s:
+            s = s.replace(" ", "T", 1)
+        dt = datetime.fromisoformat(s)
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
+def _is_evidence_severity(log: dict) -> bool:
+    """Warning/error/critical, or HTTP 5xx. INFO/DEBUG are excluded."""
+    sev = str(log.get("severity", "")).lower()
+    if sev in {"warning", "error", "critical"}:
+        return True
+    level = str(log.get("level", "")).lower()
+    if level in {"warn", "warning", "error", "err", "critical", "fatal"}:
+        return True
+    try:
+        status = int(log.get("status_code") or 0)
+    except (TypeError, ValueError):
+        status = 0
+    return status >= 500
+
+
+def _select_anomaly_templates(
+    enriched_logs:  list[dict],
+    root_service:   str,
+    anomaly_events: list,
+    incident:       dict,
+    top_n:          int = 3,
+) -> list[str]:
+    """
+    Pick log templates that **spiked** in the root cause service during the
+    incident window, rather than the templates that are simply most frequent
+    overall.
+
+    Why
+    ───
+    The naïve ``top-N by count`` over the full log batch surfaces routine
+    INFO templates (``cache hit for key <*>``, ``request handled in <*>``)
+    that are always dominant and say nothing about the incident.  Evidence
+    should instead show *what changed*: templates whose frequency in the
+    incident window is unusually high relative to the pre-incident baseline.
+
+    Strategy
+    ────────
+    1. Filter the batch to ``root_service`` and warning/error/critical
+       severity (or HTTP status ≥ 500).  INFO/DEBUG is excluded — it is not
+       evidence of a failure.
+    2. Cluster the filtered batch with Drain (re-using the existing impl).
+    3. Split by ``incident.opened_at`` (falling back to the earliest
+       anomaly window for the root service).  Logs at or after that moment
+       are *hot*; logs before it are the *baseline*.
+    4. Score each template by ``hot_count / (base_count + 1)``.  Templates
+       that never appeared in the baseline (``+1`` keeps the math defined)
+       get the highest score — they are the newly-emerged failure modes.
+       Hot count breaks ties so a never-seen one-off doesn't beat a large
+       genuine spike.
+    5. Return the top ``top_n``.  Empty result → caller falls back to the
+       legacy global top-N by count.
+    """
+    from backend.services.log_clustering import extract_templates
+
+    candidates = [
+        log for log in enriched_logs
+        if str(log.get("service", "")) == root_service and _is_evidence_severity(log)
+    ]
+    if len(candidates) < 3:
+        return []
+
+    cutoff = _parse_ts(incident.get("opened_at"))
+    if cutoff is None:
+        root_anom_ts = sorted(
+            ts for ts in (
+                _parse_ts(getattr(e, "window", None))
+                for e in anomaly_events
+                if getattr(e, "service", None) == root_service
+            )
+            if ts is not None
+        )
+        cutoff = root_anom_ts[0] if root_anom_ts else None
+
+    result    = extract_templates(candidates, top_n=200)
+    clustered = result.get("clustered_logs") or []
+
+    if cutoff is None or not clustered:
+        return [t["template"] for t in result.get("templates", [])[:top_n]]
+
+    hot:  dict[str, int] = {}
+    base: dict[str, int] = {}
+    for log, clust in zip(candidates, clustered):
+        tmpl = clust.get("template")
+        if not tmpl:
+            continue
+        ts = _parse_ts(log.get("timestamp"))
+        if ts is None:
+            continue
+        if ts >= cutoff:
+            hot[tmpl] = hot.get(tmpl, 0) + 1
+        else:
+            base[tmpl] = base.get(tmpl, 0) + 1
+
+    if not hot:
+        return [t["template"] for t in result.get("templates", [])[:top_n]]
+
+    scored = sorted(
+        hot.items(),
+        key=lambda kv: (-(kv[1] / (base.get(kv[0], 0) + 1)), -kv[1]),
+    )
+    return [tmpl for tmpl, _ in scored[:top_n]]
+
+
 # ─── Main entry point ────────────────────────────────────────────────────────────
 
 def build_rca_report(
@@ -250,10 +371,21 @@ def build_rca_report(
     has_slo = alert_level != "none"
 
     # ── Stage 4: log templates ────────────────────────────────────────────────
-    templates = [
-        t["template"]
-        for t in (cluster_result.get("templates") or [])[:3]
-    ]
+    # Prefer templates that actually spiked in the incident window
+    # (hot vs baseline), filtered to the root cause service and error-ish
+    # severity. Falls back to the global top-N if evidence is too thin.
+    templates = _select_anomaly_templates(
+        enriched_logs  = enriched_logs,
+        root_service   = root_service,
+        anomaly_events = anomaly_events,
+        incident       = incident,
+        top_n          = 3,
+    )
+    if not templates:
+        templates = [
+            t["template"]
+            for t in (cluster_result.get("templates") or [])[:3]
+        ]
 
     # ── Stage 5: timeline ─────────────────────────────────────────────────────
     timeline = [

@@ -48,6 +48,45 @@ def test_preprocess_strips_hex():
     assert "<*>" in _preprocess("address 0xDEADBEEF")
 
 
+# ─── Unit-suffix normalisation ──────────────────────────────────────────────────
+# Regression guard: numbers glued to common unit suffixes (ms / s / MB / %)
+# must collapse to "<*>" just like bare integers, otherwise Drain produces
+# duplicate clusters (e.g. "timeout after 100ms ..." and "timeout after <*> ...")
+# for the same template.
+
+def test_preprocess_strips_time_unit_ms():
+    assert _preprocess("took 100ms") == "took <*>"
+
+
+def test_preprocess_strips_time_unit_seconds():
+    assert _preprocess("retry after 30s") == "retry after <*>"
+
+
+def test_preprocess_strips_size_unit_mb():
+    assert _preprocess("allocated 500MB") == "allocated <*>"
+
+
+def test_preprocess_strips_percent():
+    assert _preprocess("disk 75% full") == "disk <*> full"
+
+
+def test_preprocess_strips_microseconds():
+    assert _preprocess("latency 250us") == "latency <*>"
+
+
+def test_unit_and_bare_numbers_produce_same_template():
+    """'100ms' and '5000' in the same slot must end up in one cluster."""
+    logs = [
+        {"message": "db timeout after 100ms on pool"},
+        {"message": "db timeout after 5000 on pool"},
+        {"message": "db timeout after 30s on pool"},
+        {"message": "db timeout after 2m on pool"},
+    ]
+    result = extract_templates(logs)
+    assert result["unique_templates"] == 1
+    assert result["templates"][0]["count"] == 4
+
+
 # ─── _token_similarity ────────────────────────────────────────────────────────────
 
 def test_similarity_identical_tokens():

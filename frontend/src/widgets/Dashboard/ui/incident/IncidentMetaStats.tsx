@@ -23,21 +23,21 @@ const MetaStat = ({
   sub?: string;
   highlight?: HighlightTone;
 }) => (
-  <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+  <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 px-3 py-3 backdrop-blur">
+    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
       {label}
     </div>
     <div
       className={cn(
-        "mt-0.5 text-lg font-bold",
-        highlight === "red" && "text-red-600",
-        highlight === "amber" && "text-amber-600",
-        !highlight && "text-slate-900"
+        "mt-1 text-2xl font-bold tabular-nums",
+        highlight === "red" && "text-rose-400",
+        highlight === "amber" && "text-amber-400",
+        !highlight && "text-zinc-50"
       )}
     >
       {value}
     </div>
-    {sub && <div className="mt-0.5 text-[11px] text-slate-500">{sub}</div>}
+    {sub && <div className="mt-0.5 font-mono text-[11px] text-zinc-500">{sub}</div>}
   </div>
 );
 

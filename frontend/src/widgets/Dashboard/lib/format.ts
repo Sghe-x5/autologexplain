@@ -36,26 +36,26 @@ export function formatRelativeTime(iso: string | null | undefined): string {
 }
 
 export const severityColors: Record<IncidentSeverity, string> = {
-  critical: "bg-red-100 text-red-800 border border-red-200",
-  error: "bg-orange-100 text-orange-800 border border-orange-200",
-  warning: "bg-amber-100 text-amber-800 border border-amber-200",
-  info: "bg-blue-50 text-blue-700 border border-blue-100",
-  debug: "bg-slate-100 text-slate-600 border border-slate-200",
+  critical: "bg-rose-500/10 text-rose-300 border border-rose-500/30",
+  error: "bg-orange-500/10 text-orange-300 border border-orange-500/30",
+  warning: "bg-amber-500/10 text-amber-300 border border-amber-500/30",
+  info: "bg-sky-500/10 text-sky-300 border border-sky-500/30",
+  debug: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/30",
 };
 
 export const statusColors: Record<IncidentStatus, string> = {
-  open: "bg-red-50 text-red-700 border border-red-200",
-  acknowledged: "bg-amber-50 text-amber-700 border border-amber-200",
-  mitigated: "bg-blue-50 text-blue-700 border border-blue-200",
-  resolved: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  reopened: "bg-purple-50 text-purple-700 border border-purple-200",
+  open: "bg-rose-500/10 text-rose-300 border border-rose-500/30",
+  acknowledged: "bg-amber-500/10 text-amber-300 border border-amber-500/30",
+  mitigated: "bg-sky-500/10 text-sky-300 border border-sky-500/30",
+  resolved: "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30",
+  reopened: "bg-violet-500/10 text-violet-300 border border-violet-500/30",
 };
 
 export const alertLevelColors: Record<AlertLevel, string> = {
-  page: "bg-red-100 text-red-800 border border-red-200",
-  ticket: "bg-orange-100 text-orange-800 border border-orange-200",
-  warning: "bg-amber-100 text-amber-800 border border-amber-200",
-  none: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  page: "bg-rose-500/10 text-rose-300 border border-rose-500/30",
+  ticket: "bg-orange-500/10 text-orange-300 border border-orange-500/30",
+  warning: "bg-amber-500/10 text-amber-300 border border-amber-500/30",
+  none: "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30",
 };
 
 export const alertLevelLabel: Record<AlertLevel, string> = {

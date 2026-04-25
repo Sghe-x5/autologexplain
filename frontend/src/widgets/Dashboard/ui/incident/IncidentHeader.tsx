@@ -21,18 +21,18 @@ export const IncidentHeader = ({ incident }: { incident: Incident }) => {
   const nextStatuses = ALLOWED_NEXT[incident.status] ?? [];
 
   return (
-    <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="mb-6 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-6 backdrop-blur">
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-center gap-2">
             <SeverityBadge value={incident.severity} />
             <StatusBadge value={incident.status} />
-            <span className="text-[11px] text-slate-400">
+            <span className="font-mono text-[11px] text-zinc-500">
               {incident.service} · {incident.environment} · {incident.category}
             </span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">{incident.title}</h1>
-          <div className="mt-1 font-mono text-xs text-slate-400">
+          <h1 className="text-xl font-bold text-zinc-50">{incident.title}</h1>
+          <div className="mt-1 font-mono text-xs text-zinc-600">
             {incident.fingerprint}
           </div>
         </div>
@@ -49,7 +49,7 @@ export const IncidentHeader = ({ incident }: { incident: Incident }) => {
                   actor: "dashboard-user",
                 })
               }
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-violet-500/40 hover:bg-zinc-800 hover:text-violet-300 disabled:opacity-50"
               data-test-id={`status-transition-${next}`}
             >
               → {statusLabel[next]}

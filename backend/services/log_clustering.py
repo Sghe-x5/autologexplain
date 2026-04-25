@@ -46,11 +46,26 @@ from typing import Optional
 # ─── Pre-processing patterns (order matters) ────────────────────────────────────
 
 _PREPROCESS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", re.I), "<*>"),  # UUID
-    (re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5})?\b"),               "<*>"),  # IPv4[:port]
-    (re.compile(r"\b0x[0-9a-f]+\b", re.I),                                   "<*>"),  # hex literal
-    (re.compile(r"'[^']*'|\"[^\"]*\""),                                       "<*>"),  # quoted string
-    (re.compile(r"\b\d+\b"),                                                  "<*>"),  # integer
+    # UUID
+    (re.compile(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", re.I), "<*>"),
+    # IPv4[:port]
+    (re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5})?\b"),               "<*>"),
+    # Hex literal (0x…)
+    (re.compile(r"\b0x[0-9a-f]+\b", re.I),                                   "<*>"),
+    # Quoted strings
+    (re.compile(r"'[^']*'|\"[^\"]*\""),                                       "<*>"),
+    # Number with a common unit suffix — time / size / rate / percent.
+    # Must come BEFORE the generic integer rule so "100ms" collapses as a
+    # single token instead of leaving the "ms" suffix behind (which would
+    # otherwise create a spurious second cluster for the same template).
+    (re.compile(
+        r"(?<!\w)\d+(?:\.\d+)?(?:ms|us|ns|μs|kib|mib|gib|tib|kb|mb|gb|tb|bps|rps|qps|tps|eps|[smhd]|%)(?!\w)",
+        re.I,
+    ), "<*>"),
+    # Generic integer / float.  (?<!\w)/(?!\w) instead of \b so that numbers
+    # glued to word characters (e.g. "id=12345x") are not partially matched —
+    # consistent with log_fingerprints.py.
+    (re.compile(r"(?<!\w)\d+(?:\.\d+)?(?!\w)"),                               "<*>"),
 ]
 _SPACE_RE = re.compile(r"\s+")
 

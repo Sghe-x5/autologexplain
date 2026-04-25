@@ -19,29 +19,38 @@ const Pill = ({
 }) => (
   <div className="flex items-center gap-2 py-1.5">
     <CheckCircle2
-      className={cn("h-4 w-4", active ? "text-emerald-500" : "text-slate-300")}
+      className={cn(
+        "h-4 w-4 shrink-0",
+        active
+          ? "text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]"
+          : "text-zinc-700"
+      )}
     />
     <div className="flex-1">
       <div
         className={cn(
-          "text-xs font-medium",
-          active ? "text-slate-900" : "text-slate-400"
+          "font-mono text-xs",
+          active ? "font-semibold text-zinc-100" : "text-zinc-600"
         )}
       >
         {label}
       </div>
       {active && time && (
-        <div className="text-[10px] text-slate-500">{formatDateTime(time)}</div>
+        <div className="font-mono text-[10px] text-zinc-500">
+          {formatDateTime(time)}
+        </div>
       )}
     </div>
   </div>
 );
 
 export const LifecycleChecklist = ({ incident }: { incident: Incident }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-5 backdrop-blur">
     <div className="mb-3 flex items-center gap-2">
-      <AlertCircle className="h-4 w-4 text-slate-600" />
-      <h2 className="text-sm font-semibold text-slate-900">Жизненный цикл</h2>
+      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 ring-1 ring-emerald-500/30">
+        <AlertCircle className="h-3.5 w-3.5 text-emerald-400" />
+      </div>
+      <h2 className="text-sm font-semibold text-zinc-100">Жизненный цикл</h2>
     </div>
     <Pill active={!!incident.opened_at} label="open" time={incident.opened_at} />
     <Pill
