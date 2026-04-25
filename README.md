@@ -169,10 +169,3 @@ docker compose exec api python /app/e2e-artifacts/evaluate_detectors.py
 # Frontend
 cd frontend && npx tsc --noEmit -p tsconfig.app.json && npm test && npm run build
 ```
-
-## Дополнительная документация
-
-- [backend/services/README.md](backend/services/README.md) — карта сервисного слоя
-- [backend/services/forecasting/README.md](backend/services/forecasting/README.md) — детали forecasting-подсистемы
-- [backend/services/similar_incidents/README.md](backend/services/similar_incidents/README.md) — формула similarity scoring
-- [backend/services/postmortem/README.md](backend/services/postmortem/README.md) — устройство генератора постмортемов
