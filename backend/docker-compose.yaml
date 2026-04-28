@@ -6,7 +6,6 @@ services:
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload
     env_file:
       - ./.env
-      - ../analytics/.env
     environment:
       - PYTHONPATH=/app:/app/backend
     ports:
@@ -31,7 +30,6 @@ services:
       -E
     env_file:
       - ./.env
-      - ../analytics/.env
     environment:
       - PYTHONPATH=/app:/app/backend
     depends_on:
@@ -52,7 +50,6 @@ services:
       -l info
     env_file:
       - ./.env
-      - ../analytics/.env
     environment:
       - PYTHONPATH=/app:/app/backend
     depends_on:

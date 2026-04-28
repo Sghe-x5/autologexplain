@@ -56,21 +56,31 @@ graph TB
 
 FSM инцидента: `open → acknowledged → mitigated → resolved` + `resolved → reopened`. История изменений — append-only в `incident_events`.
 
+## Требования
+
+- Docker 24.0+ и Docker Compose 2.20+ для backend-стека.
+- Python 3.11 для вспомогательных E2E-скриптов.
+- Node.js `20.19+` либо `22.12+` для frontend. Node.js 12/16/18 не подходит для Vite 7 и Tailwind 4.
+
 ## Quick Start
 
 ```bash
+# 0. Если используете nvm
+nvm install
+nvm use
+
 # 1. Конфигурация
 cp backend/.env.example backend/.env
-cp analytics/.env.example analytics/.env  # опционально, нужно для LLM-чата
+cp analytics/.env.example analytics/.env  # только если нужен LLM-чат
 
 # 2. Backend stack
-cd backend && docker compose up -d --build
+(cd backend && docker compose up -d --build)
 
 # 3. Демо-данные + полный pipeline
 bash e2e-artifacts/full_pipeline.sh
 
 # 4. Frontend
-cd frontend && npm install && npm run dev
+(cd frontend && npm install && npm run dev)
 ```
 
 После старта:

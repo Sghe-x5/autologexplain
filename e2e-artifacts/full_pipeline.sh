@@ -4,8 +4,33 @@ set -euo pipefail
 
 cd "$(dirname "$0")"/..
 
+API_CONTAINER="${API_CONTAINER:-backend-api-1}"
+CLICKHOUSE_CONTAINER="${CLICKHOUSE_CONTAINER:-backend-clickhouse-1}"
+REDIS_CONTAINER="${REDIS_CONTAINER:-backend-redis-1}"
+PIPELINE_CLICKHOUSE_HOST="${PIPELINE_CLICKHOUSE_HOST:-clickhouse}"
+PIPELINE_CLICKHOUSE_PORT="${PIPELINE_CLICKHOUSE_PORT:-8123}"
+PIPELINE_CLICKHOUSE_USER="${PIPELINE_CLICKHOUSE_USER:-default}"
+PIPELINE_CLICKHOUSE_PASSWORD="${PIPELINE_CLICKHOUSE_PASSWORD:-}"
+PIPELINE_CLICKHOUSE_DB="${PIPELINE_CLICKHOUSE_DB:-default}"
+PIPELINE_CLICKHOUSE_TABLE="${PIPELINE_CLICKHOUSE_TABLE:-logs}"
+
+clickhouse_query() {
+  docker exec "$CLICKHOUSE_CONTAINER" clickhouse-client --query "$1"
+}
+
+api_python() {
+  docker exec \
+    -e CLICKHOUSE_HOST="$PIPELINE_CLICKHOUSE_HOST" \
+    -e CLICKHOUSE_PORT="$PIPELINE_CLICKHOUSE_PORT" \
+    -e CLICKHOUSE_USER="$PIPELINE_CLICKHOUSE_USER" \
+    -e CLICKHOUSE_PASSWORD="$PIPELINE_CLICKHOUSE_PASSWORD" \
+    -e CLICKHOUSE_DB="$PIPELINE_CLICKHOUSE_DB" \
+    -e CLICKHOUSE_TABLE="$PIPELINE_CLICKHOUSE_TABLE" \
+    "$API_CONTAINER" python "$@"
+}
+
 echo "==> 1. Create logs table"
-docker exec backend-clickhouse-1 clickhouse-client --query "
+clickhouse_query "
 CREATE TABLE IF NOT EXISTS logs (
   timestamp DateTime64(3, 'UTC'),
   product LowCardinality(String),
@@ -25,20 +50,20 @@ echo "==> 2. Regenerate synthetic logs"
 python3 e2e-artifacts/seed_logs.py > /dev/null
 
 echo "==> 3. Truncate logs and re-insert seed"
-docker exec backend-clickhouse-1 clickhouse-client --query "TRUNCATE TABLE IF EXISTS logs"
-docker cp e2e-artifacts/seed_logs.csv backend-clickhouse-1:/tmp/seed_logs.csv
-docker exec backend-clickhouse-1 bash -c "clickhouse-client --query='INSERT INTO logs FORMAT CSVWithNames' < /tmp/seed_logs.csv"
+clickhouse_query "TRUNCATE TABLE IF EXISTS logs"
+docker cp e2e-artifacts/seed_logs.csv "$CLICKHOUSE_CONTAINER":/tmp/seed_logs.csv
+docker exec "$CLICKHOUSE_CONTAINER" bash -c "clickhouse-client --query='INSERT INTO logs FORMAT CSVWithNames' < /tmp/seed_logs.csv"
 echo -n "   logs count: "
-docker exec backend-clickhouse-1 clickhouse-client --query "SELECT count() FROM logs"
+clickhouse_query "SELECT count() FROM logs"
 
 echo "==> 4. Reset watermarks + truncate pipeline tables"
-docker exec backend-redis-1 redis-cli DEL "signals:log_signals_1m:watermark" "signals:anomaly_events:watermark" > /dev/null
+docker exec "$REDIS_CONTAINER" redis-cli DEL "signals:log_signals_1m:watermark" "signals:anomaly_events:watermark" > /dev/null
 for t in log_signals_1m fingerprint_catalog anomaly_events incident_candidates incidents incident_events slo_burn service_dependency_graph; do
-  docker exec backend-clickhouse-1 clickhouse-client --query "TRUNCATE TABLE $t" || true
+  clickhouse_query "TRUNCATE TABLE IF EXISTS $t"
 done
 
 echo "==> 5. Run signalization cycle"
-docker exec backend-api-1 python -c "
+api_python -c "
 from backend.services.signals import run_signalization_cycle
 import json
 result = run_signalization_cycle(initial_lookback_minutes=240, max_minutes_per_cycle=240, max_rows_per_minute=50000)
@@ -46,7 +71,7 @@ print('signalization:', json.dumps(result, default=str))
 "
 
 echo "==> 6. Run anomaly detection cycle"
-docker exec backend-api-1 python -c "
+api_python -c "
 from backend.services.signals import run_anomaly_detection_cycle
 import json
 result = run_anomaly_detection_cycle(
@@ -59,7 +84,7 @@ print('anomaly_detection:', json.dumps(result, default=str))
 "
 
 echo "==> 7. Run incident detector"
-docker exec backend-api-1 python -c "
+api_python -c "
 from backend.services.incidents import run_detector_cycle
 import json
 result = run_detector_cycle(lookback_minutes=360, max_logs=100000, anomaly_threshold=2.5, slo_target=0.995)
@@ -67,7 +92,7 @@ print('detector:', json.dumps(result, default=str))
 "
 
 echo "==> 8. Run incident correlator"
-docker exec backend-api-1 python -c "
+api_python -c "
 from backend.services.incidents import run_correlator_cycle
 import json
 result = run_correlator_cycle(lookback_minutes=360, max_candidates=500, merge_window_minutes=30, reopen_window_minutes=360)
@@ -75,7 +100,7 @@ print('correlator:', json.dumps(result, default=str))
 "
 
 echo "==> 9. Run incident RCA"
-docker exec backend-api-1 python -c "
+api_python -c "
 from backend.services.incidents import run_rca_cycle
 import json
 result = run_rca_cycle(max_incidents=200, trace_lookback_minutes=180)
@@ -83,7 +108,7 @@ print('rca:', json.dumps(result, default=str))
 "
 
 echo "==> 10. Quick sanity stats"
-docker exec backend-clickhouse-1 clickhouse-client --query "
+clickhouse_query "
 SELECT 'signals'  AS tbl, count() AS cnt FROM log_signals_1m UNION ALL
 SELECT 'anomalies',           count() FROM anomaly_events UNION ALL
 SELECT 'candidates',          count() FROM incident_candidates UNION ALL
