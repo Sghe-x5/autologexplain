@@ -40,9 +40,9 @@ describe("chatManagementApi (unit behavior)", () => {
       .dispatch(chatManagementApi.endpoints.newChat.initiate(undefined))
       .unwrap();
 
-    const [req] = fetchMock.mock.calls[0];
-    expect(req.url).toContain("/chats/new");
-    expect(req.method).toBe("POST");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/chats/new");
+    expect(init.method).toBe("POST");
 
     expect(res).toEqual({ chat_id: "c1", token: "t1" });
   });
@@ -63,12 +63,11 @@ describe("chatManagementApi (unit behavior)", () => {
       )
       .unwrap();
 
-    const [req] = fetchMock.mock.calls[0];
-    expect(req.url).toContain("/chats/renew");
-    expect(req.method).toBe("POST");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/chats/renew");
+    expect(init.method).toBe("POST");
 
-    const body = await req.clone().text();
-    expect(body).toBe(JSON.stringify({ chat_id: "abc" }));
+    expect(init.body).toBe(JSON.stringify({ chat_id: "abc" }));
 
     expect(res).toEqual({ token: "new-token" });
   });

@@ -145,6 +145,9 @@ describe("chatMessagesApi (integration)", () => {
 
     await expect(
       store.dispatch(chatMessagesApi.endpoints.autoAnalysis.initiate()).unwrap()
-    ).rejects.toThrow(/Failed to create chat: 500 internal error/);
+    ).rejects.toEqual({
+      status: "CUSTOM_ERROR",
+      error: "Failed to create chat: 500 internal error",
+    });
   });
 });

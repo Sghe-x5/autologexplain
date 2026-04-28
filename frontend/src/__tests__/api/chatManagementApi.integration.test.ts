@@ -33,9 +33,9 @@ describe("chatManagementApi (integration)", () => {
       .dispatch(chatManagementApi.endpoints.newChat.initiate())
       .unwrap();
 
-    const [req] = (global.fetch as any).mock.calls[0];
-    expect(req.url).toContain("/chats/new");
-    expect(req.method).toBe("POST");
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain("/chats/new");
+    expect(init.method).toBe("POST");
 
     expect(res).toEqual({ chat_id: "c1", token: "t1" });
   });
@@ -54,12 +54,11 @@ describe("chatManagementApi (integration)", () => {
       )
       .unwrap();
 
-    const [req] = (global.fetch as any).mock.calls[0];
-    expect(req.url).toContain("/chats/renew");
-    expect(req.method).toBe("POST");
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain("/chats/renew");
+    expect(init.method).toBe("POST");
 
-    const body = await req.clone().text();
-    expect(body).toBe(JSON.stringify({ chat_id: "abc" }));
+    expect(init.body).toBe(JSON.stringify({ chat_id: "abc" }));
 
     expect(res).toEqual({ token: "new-token" });
   });

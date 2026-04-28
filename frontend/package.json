@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "vitest",
+    "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",

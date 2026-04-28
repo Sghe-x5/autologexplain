@@ -36,7 +36,8 @@ class MockWebSocket {
 function createStore() {
   return configureStore({
     reducer: { [wsApi.reducerPath]: wsApi.reducer },
-    middleware: (gDM) => gDM().concat(wsApi.middleware),
+    middleware: (gDM) =>
+      gDM({ serializableCheck: false }).concat(wsApi.middleware),
   });
 }
 
