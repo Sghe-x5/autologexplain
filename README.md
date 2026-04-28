@@ -91,7 +91,7 @@ bash e2e-artifacts/full_pipeline.sh
 
 ```bash
 python3 e2e-artifacts/generate_training_dataset.py
-docker compose exec api python -m backend.services.forecasting.trainer
+(cd backend && docker compose exec api python -m backend.services.forecasting.trainer)
 ```
 
 ## Подсистемы
@@ -171,10 +171,10 @@ rca_score = 0.35·anomaly + 0.25·earliness + 0.20·fanout + 0.20·criticality
 
 ```bash
 # Backend (204 unit-теста)
-docker compose exec api python -m pytest backend/tests/unit -v
+(cd backend && docker compose exec api python -m pytest backend/tests/unit -v)
 
 # Offline-сравнение детекторов
-docker compose exec api python /app/e2e-artifacts/evaluate_detectors.py
+(cd backend && docker compose exec api python /app/e2e-artifacts/evaluate_detectors.py)
 
 # Frontend
 cd frontend && npx tsc --noEmit -p tsconfig.app.json && npm test && npm run build
