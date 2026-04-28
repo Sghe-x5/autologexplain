@@ -29,9 +29,10 @@ api_python() {
     "$API_CONTAINER" python "$@"
 }
 
-echo "==> 1. Create logs table"
+echo "==> 1. Recreate logs table"
+clickhouse_query "DROP TABLE IF EXISTS logs"
 clickhouse_query "
-CREATE TABLE IF NOT EXISTS logs (
+CREATE TABLE logs (
   timestamp DateTime64(3, 'UTC'),
   product LowCardinality(String),
   service LowCardinality(String),
@@ -49,17 +50,16 @@ ORDER BY (service, environment, timestamp)
 echo "==> 2. Regenerate synthetic logs"
 python3 e2e-artifacts/seed_logs.py > /dev/null
 
-echo "==> 3. Truncate logs and re-insert seed"
-clickhouse_query "TRUNCATE TABLE IF EXISTS logs"
+echo "==> 3. Insert seed logs"
 docker cp e2e-artifacts/seed_logs.csv "$CLICKHOUSE_CONTAINER":/tmp/seed_logs.csv
 docker exec "$CLICKHOUSE_CONTAINER" bash -c "clickhouse-client --query='INSERT INTO logs FORMAT CSVWithNames' < /tmp/seed_logs.csv"
 echo -n "   logs count: "
 clickhouse_query "SELECT count() FROM logs"
 
-echo "==> 4. Reset watermarks + truncate pipeline tables"
+echo "==> 4. Reset watermarks + drop pipeline tables"
 docker exec "$REDIS_CONTAINER" redis-cli DEL "signals:log_signals_1m:watermark" "signals:anomaly_events:watermark" > /dev/null
 for t in log_signals_1m fingerprint_catalog anomaly_events incident_candidates incidents incident_events slo_burn service_dependency_graph; do
-  clickhouse_query "TRUNCATE TABLE IF EXISTS $t"
+  clickhouse_query "DROP TABLE IF EXISTS $t"
 done
 
 echo "==> 5. Run signalization cycle"
