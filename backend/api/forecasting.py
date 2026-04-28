@@ -2,9 +2,9 @@
 Forecasting API (Variant Y Lite).
 
 Endpoints:
-  GET  /forecasting/risk        — risk score для каждого (service, env) на last minute
-  POST /forecasting/explain     — SHAP объяснение для одной точки
   GET  /forecasting/info        — метаданные модели (metrics, features, size)
+  GET  /forecasting/risk        — risk score для каждого (service, env) на last minute;
+                                   ответ включает SHAP-вклад top-N признаков (top_features)
 """
 
 from __future__ import annotations

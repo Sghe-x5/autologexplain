@@ -231,9 +231,4 @@ def generate_postmortem(inp: PostmortemInput) -> str:
     md.append("_Заполните вручную: что сработало хорошо, что можно улучшить в процессе._")
     md.append("")
 
-    md.append("---")
-    md.append(
-        f"_Документ сгенерирован {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} "
-        f"автоматическим генератором постмортемов AutoLogExplain._"
-    )
     return "\n".join(md)
